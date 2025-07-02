@@ -1,5 +1,79 @@
-# Data Commons Agent Toolkit
-Tools and agents for interacting with the Data Commons Knowledge Graph using the Model Context Protocol (MCP).
+# Data Commons MCP Server
 
-**IMPORTANT**: This is an experimental project.
+This is an experimental MCP server for fetching public information from [Data Commons](https://datacommons.org/).
 
+**This is experimental and subject to change.**
+
+## Requirements
+
+1.  A Data Commons API key. You can get one from [apikeys.datacommons.org](https://apikeys.datacommons.org/).
+2.  `uv`. You can find installation instructions at [https://astral.sh/uv](https://astral.sh/uv).
+
+## Getting Started
+
+1.  Clone the repository.
+2.  Run the server.
+
+    You can run the server in a few different ways:
+
+    **stdio**
+
+    ```bash
+    DC_API_KEY=<your-key> uv run datacommons-mcp serve stdio
+    ```
+
+    **http**
+
+    This will run the server with SSE on port 8080. You can access it at `http://localhost:8080/sse`.
+
+    ```bash
+    DC_API_KEY=<your-key> uv run datacommons-mcp serve http
+    ```
+
+    **Debugging**
+
+    You can start the MCP inspector on port 6277. Look at the output for the pre-filled proxy auth token URL.
+
+    ```bash
+    DC_API_KEY=<your-key> npx @modelcontextprotocol/inspector uv run datacommons-mcp serve stdio
+    ```
+
+
+    > IMPORTANT: Open the inspector via the **pre-filled session token url** which is printed to terminal on server startup.
+    * It should look like `http://localhost:6274/?MCP_PROXY_AUTH_TOKEN={session_token}`
+
+    Then to connect to this MCP server, enter the following values in the inspector UI:
+
+    - Transport Type: `STDIO`
+    - Command: `uv`
+    - Arguments: `run datacommons-mcp serve stdio`
+
+    Click `Connect`
+
+## Testing with Gemini CLI
+
+You can use this MCP server with the [Gemini CLI](https://github.com/google-gemini/gemini-cli).
+
+Edit your `~/.gemini/settings.json` file and add the following, replacing `/path/to/your/agent-toolkit` with the local checkout directory and `<your api key>` with your actual API key:
+
+```json
+{
+  ...
+  "mcpServers": {
+    "datacommons-mcp": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/your/agent-toolkit/",
+        "run",
+        "datacommons-mcp",
+        "serve",
+        "stdio"
+      ],
+      "env": {
+        "DC_API_KEY": "<your api key>"
+      }
+    }
+  }
+}
+```

@@ -19,10 +19,13 @@ import asyncio
 import types
 from typing import Union, get_args, get_origin
 
-import config
-from clients import create_clients
-from constants import BASE_DC_ID
-from datacommons_chart_types import (
+from fastmcp import FastMCP
+from pydantic import ValidationError
+
+import datacommons_mcp.config as config
+from datacommons_mcp.clients import create_clients
+from datacommons_mcp.constants import BASE_DC_ID
+from datacommons_mcp.datacommons_chart_types import (
     CHART_CONFIG_MAP,
     DataCommonsChartConfig,
     HierarchyLocation,
@@ -30,9 +33,7 @@ from datacommons_chart_types import (
     SinglePlaceLocation,
     SingleVariableChart,
 )
-from fastmcp import FastMCP
-from pydantic import ValidationError
-from response_transformers import transform_obs_response
+from datacommons_mcp.response_transformers import transform_obs_response
 
 # Create clients based on config
 multi_dc_client = create_clients(config.BASE_DC_CONFIG)
@@ -616,6 +617,3 @@ async def get_datacommons_chart_config(
         # Catch Pydantic errors and make them more user-friendly
         raise ValueError(f"Validation failed for chart_type '{chart_type}': {e}") from e
 
-
-if __name__ == "__main__":
-    asyncio.run(mcp.run_sse_async(host="localhost", port=8080))

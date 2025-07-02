@@ -21,10 +21,11 @@ import json
 import re
 
 import requests
-from cache import LruCache
-from constants import BASE_DC_ID
 from datacommons_client.client import DataCommonsClient
-from topics import TopicStore, read_topic_cache
+
+from datacommons_mcp.cache import LruCache
+from datacommons_mcp.constants import BASE_DC_ID
+from datacommons_mcp.topics import TopicStore, read_topic_cache
 
 
 class DCClient:

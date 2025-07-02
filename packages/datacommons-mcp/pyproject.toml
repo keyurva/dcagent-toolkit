@@ -1,0 +1,20 @@
+[project]
+name = "datacommons-mcp"
+version = "0.1.0"
+description = "Data Commons MCP server."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "fastmcp",
+    "requests",
+    "datacommons-client",
+]
+
+[project.scripts]
+datacommons-mcp = "datacommons_mcp.cli:cli"
+
+[build-system]
+requires = ["uv", "setuptools"]
+build-backend = "setuptools.build_meta"
