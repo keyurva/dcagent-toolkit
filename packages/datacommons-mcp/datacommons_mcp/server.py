@@ -16,6 +16,7 @@ Server module for the DC MCP server.
 """
 
 import asyncio
+import logging
 import types
 from typing import Union, get_args, get_origin
 
@@ -24,8 +25,7 @@ from pydantic import ValidationError
 
 import datacommons_mcp.config as config
 from datacommons_mcp.clients import create_clients
-from datacommons_mcp.constants import BASE_DC_ID, CUSTOM_DC_ID
-from datacommons_mcp.datacommons_chart_types import (
+from datacommons_mcp.data_models.charts import (
     CHART_CONFIG_MAP,
     DataCommonsChartConfig,
     HierarchyLocation,
@@ -33,8 +33,10 @@ from datacommons_mcp.datacommons_chart_types import (
     SinglePlaceLocation,
     SingleVariableChart,
 )
-from datacommons_mcp.response_transformers import transform_obs_response
-import logging
+from datacommons_mcp.data_models.observations import (
+    ObservationToolResponse,
+)
+from datacommons_mcp.services import get_observations as get_observations_service
 
 # Create clients based on config
 multi_dc_client = create_clients(config.CUSTOM_DC_CONFIG)
@@ -44,16 +46,16 @@ mcp = FastMCP("DC MCP Server")
 
 @mcp.tool()
 async def get_observations(
-    variable_desc: str | None = None,
     variable_dcid: str | None = None,
-    place_name: str | None = None,
+    variable_desc: str | None = None,
     place_dcid: str | None = None,
+    place_name: str | None = None,
     child_place_type: str | None = None,
-    facet_id_override: str | None = None,
+    source_id_override: str | None = None,
     period: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
-) -> dict:
+) -> ObservationToolResponse:
     """Fetches observations for a statistical variable from Data Commons.
 
     This tool can operate in two primary modes:
@@ -63,15 +65,16 @@ async def get_observations(
     ### Core Logic & Rules
 
     * **Variable Selection**: You **must** provide either `variable_dcid` or `variable_desc`.
-        * **Rule 1 (Preferred)**: If you have a relevant `variable_dcid` from a previous tool call (like `get_available_variables_for_place`), **use it**. This is more precise.
-        * **Rule 2 (Fallback)**: If you do not have a known `variable_dcid`, use `variable_desc` with a natural language description (e.g., "median household income").
+        * **Rule 1 (Preferred)**: If you have a relevant `variable_dcid` from a previous tool call (like `get_available_variables_for_place`), **use it**. This is more precise and takes priority.
+        * **Rule 2 (Fallback)**: If you do not have a known `variable_dcid`, use `variable_desc` with a natural language description (e.g., "median household income"). Ignored if `variable_dcid` is provided.
 
     * **Place Selection**: You **must** provide either `place_dcid` or `place_name`.
-      * **Important Note for Bilateral Data**: When fetching data for bilateral variables (e.g., exports from one country to another), 
-      the `variable_dcid` often encodes one of the places (e.g., `TradeExports_FRA` refers to exports *to* France). 
-      In such cases, the `place_dcid` (or `place_name`) parameter in `get_observations` should specify the *other* place involved in the bilateral relationship 
-      (e.g., the exporter country, such as 'USA' for exports *from* USA). 
-      The `search_topics_and_variables` tool's `places_with_data` field can help identify which place is the appropriate observation source for `place_dcid` (or `place_name`).
+        * If `place_dcid` is provided, it takes priority over `place_name`.
+        * **Important Note for Bilateral Data**: When fetching data for bilateral variables (e.g., exports from one country to another),
+        the `variable_dcid` often encodes one of the places (e.g., `TradeExports_FRA` refers to exports *to* France).
+        In such cases, the `place_dcid` (or `place_name`) parameter in `get_observations` should specify the *other* place involved in the bilateral relationship
+        (e.g., the exporter country, such as 'USA' for exports *from* USA).
+        The `search_topics_and_variables` tool's `places_with_data` field can help identify which place is the appropriate observation source for `place_dcid` (or `place_name`).
 
     * **Mode Selection**:
         * To get data for the specified place (e.g., California), **do not** provide `child_place_type`.
@@ -89,12 +92,12 @@ async def get_observations(
         3.  **Default Behavior**: If you do not provide **any** date parameters (`period`, `start_date`, or `end_date`), the tool will automatically fetch only the `'latest'` observation.
 
     Args:
-      variable_desc (str, optional): A natural language description of the indicator. Ex: "carbon emissions", "unemployment rate".
       variable_dcid (str, optional): The unique identifier (DCID) of the statistical variable.
-      place_name (str, optional): The common name of the place. Ex: "United States", "India", "NYC".
+      variable_desc (str, optional): A natural language description of the indicator. Ex: "carbon emissions", "unemployment rate". Ignored if `variable_dcid` is set.
       place_dcid (str, optional): The DCID of the place.
+      place_name (str, optional): The common name of the place. Ex: "United States", "India", "NYC". Ignored if `place_dcid` is set.
       child_place_type (str, optional): The type of child places to get data for. **Use this to switch to Child Places Mode.**
-      facet_id_override (str, optional): An optional facet ID to force the use of a specific data source.
+      source_id_override (str, optional): An optional facet ID to force the use of a specific data source.
       period (str, optional): A special period filter. Accepts "all" or "latest". Overrides date range.
       start_date (str, optional): The start date for a custom range. **Used only with `end_date` and ignored if `period` is set.**
       end_date (str, optional): The end date for a custom range. **Used only with `start_date` and ignored if `period` is set.**
@@ -107,94 +110,18 @@ async def get_observations(
       2.  **Extract Data**: The data is inside `data['data_by_variable']`. Each key is a `variable_id`. The `observations` list contains the actual data points: `[entity_id, date, value]`.
       3.  **Make it Readable**: Use the `data['lookups']['id_name_mappings']` dictionary to convert `variable_id` and `entity_id` from cryptic IDs to human-readable names.
     """
-    # 1. Input validation
-    if not (variable_desc or variable_dcid) or (variable_desc and variable_dcid):
-        return {
-            "status": "ERROR",
-            "message": "Specify either 'variable_desc' or 'variable_dcid', but not both.",
-        }
-
-    if not (place_name or place_dcid) or (place_name and place_dcid):
-        return {
-            "status": "ERROR",
-            "message": "Specify either 'place_name' or 'place_dcid', but not both.",
-        }
-
-    if not period and (bool(start_date) ^ bool(end_date)):
-        return {
-            "status": "ERROR",
-            "message": "Both 'start_date' and 'end_date' are required to select a date range.",
-        }
-
-    filter_dates_post_fetch = False
-    if period:
-        # If period is provided, use it.
-        date = period
-    elif start_date != end_date:
-        # If date range is provided, fetch all data then filter response
-        date = "all"
-        filter_dates_post_fetch = True
-    elif start_date and end_date:
-        # If single date is requested, fetch the specific date
-        date = start_date
-    else:
-        # If neither period nor range are provided, default to latest date
-        # TODO(clincoln8): Replace literals with enums in pydantic models.
-        date = "latest"
-
-    # 2. Concurrently resolve identifiers if needed
-    tasks = {}
-    if variable_desc:
-        tasks["sv_search"] = multi_dc_client.search_svs([variable_desc])
-    if place_name:
-        tasks["place_search"] = multi_dc_client.base_dc.search_places([place_name])
-
-    svs = None
-    places = None
-    if tasks:
-        # Use asyncio.gather on the values (coroutines) of the tasks dict
-        task_coroutines = list(tasks.values())
-        task_results = await asyncio.gather(*task_coroutines)
-        # Map results back to their keys
-        results = dict(zip(tasks.keys(), task_results, strict=False))
-        svs = results.get("sv_search")
-        places = results.get("place_search")
-
-    # 3. Process results and set DCIDs
-    sv_dcid_to_use = variable_dcid
-    place_dcid_to_use = place_dcid
-
-    if svs:
-        sv_data = svs.get(variable_desc, {})
-        print(f"sv_data: {variable_desc} -> {sv_data}")
-        sv_dcid_to_use = sv_data.get("SV", "")
-
-    if places:
-        place_dcid_to_use = places.get(place_name, "")
-        print(f"place: {place_name} -> {place_dcid_to_use}")
-
-    # 4. Final validation
-    if not sv_dcid_to_use or not place_dcid_to_use:
-        return {"status": "NO_DATA_FOUND"}
-
-    # 5. Fetch Data
-    response = await multi_dc_client.fetch_obs(
-        [sv_dcid_to_use], place_dcid_to_use, child_place_type, date
+    return await get_observations_service(
+        client=multi_dc_client,
+        variable_dcid=variable_dcid,
+        variable_desc=variable_desc,
+        place_dcid=place_dcid,
+        place_name=place_name,
+        child_place_type=child_place_type,
+        source_id_override=source_id_override,
+        period=period,
+        start_date=start_date,
+        end_date=end_date,
     )
-
-    dc_client = multi_dc_client.custom_dc or multi_dc_client.base_dc
-    response["dc_provider"] = dc_client.dc_name
-
-    return {
-        "status": "SUCCESS",
-        "data": transform_obs_response(
-            response,
-            dc_client.fetch_entity_names,
-            other_dcids_to_lookup=[place_dcid_to_use] if child_place_type else None,
-            facet_id_override=facet_id_override,
-            date_filter=[start_date, end_date] if filter_dates_post_fetch else None,
-        ),
-    }
 
 
 @mcp.tool()
@@ -561,45 +488,45 @@ async def _search_topics_and_variables_impl(
     query: str, place1_name: str | None = None, place2_name: str | None = None
 ) -> dict:
     """Implementation of search_topics_and_variables tool."""
-    
+
     # Resolve all place names to DCIDs in a single call
     place_names = [name for name in [place1_name, place2_name] if name]
     place_dcids_map = {}
-    
+
     if place_names:
         try:
             place_dcids_map = await multi_dc_client.base_dc.search_places(place_names)
         except Exception as e:
             logging.error(f"Error resolving place names: {e}")
             pass
-    
+
     place1_dcid = place_dcids_map.get(place1_name) if place1_name else None
     place2_dcid = place_dcids_map.get(place2_name) if place2_name else None
-    
+
     # Construct search queries with their corresponding place DCIDs for filtering
     search_tasks = []
-    
+
     # Base query: search for the original query, filter by all available places
     base_place_dcids = []
     if place1_dcid:
         base_place_dcids.append(place1_dcid)
     if place2_dcid:
         base_place_dcids.append(place2_dcid)
-    
+
     search_tasks.append((query, base_place_dcids))
 
     # The following queries are not needed for bilateral relationships where we append the place name(s) to the query.
-    
+
     # Place1 query: search for query + place1_name, filter by place2_dcid
     if place1_dcid:
         place1_place_dcids = [place2_dcid] if place2_dcid else []
         search_tasks.append((f"{query} {place1_name}", place1_place_dcids))
-    
+
     # Place2 query: search for query + place2_name, filter by place1_dcid
     if place2_dcid:
         place2_place_dcids = [place1_dcid] if place1_dcid else []
         search_tasks.append((f"{query} {place2_name}", place2_place_dcids))
-    
+
     # Execute parallel searches
     tasks = []
     for search_query, place_dcids in search_tasks:
@@ -607,22 +534,26 @@ async def _search_topics_and_variables_impl(
             search_query, place_dcids=place_dcids, max_results=10
         )
         tasks.append(task)
-    
+
     # Wait for all searches to complete
     results = await asyncio.gather(*tasks)
-    
+
     # Merge and deduplicate results
     # Filter out None place DCIDs
-    valid_place_dcids = [dcid for dcid in [place1_dcid, place2_dcid] if dcid is not None]
+    valid_place_dcids = [
+        dcid for dcid in [place1_dcid, place2_dcid] if dcid is not None
+    ]
     merged_result = await _merge_search_results(results, valid_place_dcids)
-    
+
     return merged_result
 
 
-def _collect_all_dcids(topics: list[dict], variables: list[str], place_dcids: list[str] = None) -> list[str]:
+def _collect_all_dcids(
+    topics: list[dict], variables: list[str], place_dcids: list[str] = None
+) -> list[str]:
     """Collect all DCIDs from topics, variables, and places."""
     all_dcids = set()
-    
+
     # Collect topic DCIDs and their member DCIDs
     for topic in topics:
         all_dcids.add(topic["dcid"])
@@ -640,14 +571,14 @@ def _collect_all_dcids(topics: list[dict], variables: list[str], place_dcids: li
                 all_dcids.add(member["dcid"])
             else:
                 all_dcids.add(member)
-    
+
     # Collect variable DCIDs
     all_dcids.update(variables)
-    
+
     # Collect place DCIDs if provided
     if place_dcids:
         all_dcids.update(place_dcids)
-    
+
     # Filter out None values and empty strings
     result = [dcid for dcid in all_dcids if dcid is not None and dcid.strip()]
     return result
@@ -657,7 +588,7 @@ async def _fetch_and_update_lookups(dcids: list[str]) -> dict:
     """Fetch names for all DCIDs and return as lookups dictionary."""
     if not dcids:
         return {}
-    
+
     try:
         result = multi_dc_client.fetch_entity_names(dcids)
         return result
@@ -666,36 +597,36 @@ async def _fetch_and_update_lookups(dcids: list[str]) -> dict:
         return {}
 
 
-async def _merge_search_results(results: list[dict], place_dcids: list[str] = None) -> dict:
+async def _merge_search_results(
+    results: list[dict], place_dcids: list[str] = None
+) -> dict:
     """Union results from multiple search calls."""
-    
+
     # Collect all topics and variables
     all_topics = {}
     all_variables = {}
-    
+
     for result in results:
         # Union topics
         for topic in result.get("topics", []):
             topic_dcid = topic["dcid"]
             if topic_dcid not in all_topics:
                 all_topics[topic_dcid] = topic
-        
+
         # Union variables
         for variable in result.get("variables", []):
             var_dcid = variable["dcid"]
             if var_dcid not in all_variables:
                 all_variables[var_dcid] = variable
-    
+
     # Collect all DCIDs and fetch their names
     all_dcids = _collect_all_dcids(
-        list(all_topics.values()), 
-        list(all_variables.keys()), 
-        place_dcids
+        list(all_topics.values()), list(all_variables.keys()), place_dcids
     )
-    
+
     # Fetch names for all DCIDs and use as lookups
     lookups = await _fetch_and_update_lookups(all_dcids)
-    
+
     return {
         "topics": list(all_topics.values()),
         "variables": list(all_variables.values()),

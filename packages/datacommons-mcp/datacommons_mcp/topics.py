@@ -118,7 +118,7 @@ class TopicStore:
 
     def get_name(self, dcid: str) -> str:
         """Get the human-readable name for a DCID."""
-        return self.dcid_to_name.get(dcid, '')
+        return self.dcid_to_name.get(dcid, "")
 
 
 def _flatten_variables_recursive(
@@ -232,14 +232,16 @@ def _fetch_node_data(
             name_nodes = response.extract_connected_nodes(dcid, "name")
             name = name_nodes[0].value if name_nodes else ""
             # Extract relevantVariable from the arcs structure
-            relevant_var_nodes = response.extract_connected_nodes(dcid, "relevantVariable")
+            relevant_var_nodes = response.extract_connected_nodes(
+                dcid, "relevantVariable"
+            )
             relevant_variables = []
             relevant_var_names = {}
 
             for var_node in relevant_var_nodes:
                 if var_dcid := var_node.dcid:
                     relevant_variables.append(var_dcid)
-                    if var_name :=  var_node.name:
+                    if var_name := var_node.name:
                         relevant_var_names[var_dcid] = var_name
 
             nodes_by_dcid[dcid] = TopicNodeData(
@@ -257,9 +259,6 @@ def _fetch_node_data(
 def _is_topic_dcid(dcid: str) -> bool:
     """Check if a DCID represents a topic."""
     return "/topic/" in dcid
-
-
-
 
 
 def _save_topic_store_to_cache(topic_store: TopicStore, cache_file_path: Path) -> None:
@@ -327,7 +326,9 @@ def _load_topic_store_from_cache(cache_file_path: Path) -> TopicStore:
     print(f"Loaded topic store from cache with {len(topics_by_dcid)} topics")
     for topic_dcid in topics_by_dcid:
         topic_data = topics_by_dcid[topic_dcid]
-        print(f"  Topic {topic_dcid}: {len(topic_data.variables)} direct variables, {len(topic_data.member_topics)} member topics")
+        print(
+            f"  Topic {topic_dcid}: {len(topic_data.variables)} direct variables, {len(topic_data.member_topics)} member topics"
+        )
 
     return TopicStore(
         topics_by_dcid=topics_by_dcid,
@@ -422,7 +423,9 @@ def create_topic_store(
     print(f"Created topic store with {len(topics_by_dcid)} topics")
     for topic_dcid in topics_by_dcid:
         topic_data = topics_by_dcid[topic_dcid]
-        print(f"  Topic {topic_dcid}: {len(topic_data.variables)} direct variables, {len(topic_data.member_topics)} member topics")
+        print(
+            f"  Topic {topic_dcid}: {len(topic_data.variables)} direct variables, {len(topic_data.member_topics)} member topics"
+        )
 
     topic_store = TopicStore(
         topics_by_dcid=topics_by_dcid,
