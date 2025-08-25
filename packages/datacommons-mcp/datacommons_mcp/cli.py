@@ -29,8 +29,10 @@ def sse(host: str, port: int, reload: bool) -> None:
         from datacommons_mcp.server import mcp
 
         click.echo("Starting DataCommons MCP server in HTTP mode (SSE transport)")
-        click.echo("NOTE: This mode is deprecated and will be removed in a future release. "
-                   "Please use the 'http' command instead (Streamable HTTP).")
+        click.echo(
+            "NOTE: This mode is deprecated and will be removed in a future release. "
+            "Please use the 'http' command instead (Streamable HTTP)."
+        )
         click.echo(f"Server URL: http://{host}:{port}")
         click.echo(f"SSE endpoint: http://{host}:{port}/sse")
         click.echo("Press CTRL+C to stop")
@@ -40,6 +42,7 @@ def sse(host: str, port: int, reload: bool) -> None:
     except ImportError as e:
         click.echo(f"Error importing server: {e}", err=True)
         sys.exit(1)
+
 
 @serve.command()
 @click.option("--host", default="localhost", help="Host to bind.")
@@ -60,7 +63,6 @@ def http(host: str, port: int, reload: bool) -> None:
     except ImportError as e:
         click.echo(f"Error importing server: {e}", err=True)
         sys.exit(1)
-
 
 
 @serve.command()

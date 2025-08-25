@@ -1,0 +1,54 @@
+# .github/workflows/secure-evals.yaml
+name: Run Secure Evals
+
+on:
+  # This workflow ONLY runs on pull_request_target for security
+  pull_request_target:
+    branches:
+      - main
+
+  # And on manual dispatch by a maintainer
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number to run tests for"
+        required: true
+
+jobs:
+  agent-evals:
+    runs-on: ubuntu-latest
+    environment: evals-and-secrets
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Get PR's HEAD SHA for manual run
+        if: github.event_name == 'workflow_dispatch'
+        id: get_pr_sha
+        run: |
+          PR_SHA=$(gh pr view ${{ github.event.inputs.pr }} --json headRefOid -q '.headRefOid')
+          echo "sha=$PR_SHA" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          # CRITICAL: This explicitly checks out the head commit of the PR
+          ref: ${{ github.event_name == 'workflow_dispatch' && steps.get_pr_sha.outputs.sha || github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Run agent evals with pytest
+        run: uv run --extra test pytest -k "eval"
+        env:
+          DC_API_KEY: ${{ secrets.DC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_GENAI_USE_VERTEXAI: TRUE
