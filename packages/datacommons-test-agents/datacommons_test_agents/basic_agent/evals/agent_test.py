@@ -1,12 +1,13 @@
 import pathlib
-from google.adk.evaluation.agent_evaluator import AgentEvaluator
+
 import pytest
+from google.adk.evaluation.agent_evaluator import AgentEvaluator
 
 parent_path = pathlib.Path(__file__).parent
 
 
 @pytest.mark.asyncio
-async def test_basic_agent():
+async def test_basic_agent() -> None:
     """Test the agent's basic ability via a session file."""
     await AgentEvaluator.evaluate(
         agent_module="datacommons_test_agents.basic_agent.bootstrap",

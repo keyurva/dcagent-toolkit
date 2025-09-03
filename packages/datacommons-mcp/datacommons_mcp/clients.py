@@ -17,6 +17,7 @@ Provides classes for managing connections to both base and custom Data Commons i
 """
 
 import json
+import logging
 import re
 
 import requests
@@ -24,11 +25,6 @@ from datacommons_client.client import DataCommonsClient
 
 from datacommons_mcp.cache import LruCache
 from datacommons_mcp.data_models.enums import SearchScope
-from datacommons_mcp.data_models.settings import (
-    DCSettings,
-    BaseDCSettings,
-    CustomDCSettings,
-)
 from datacommons_mcp.data_models.observations import (
     DateRange,
     ObservationApiResponse,
@@ -39,8 +35,15 @@ from datacommons_mcp.data_models.observations import (
     SourceMetadata,
     VariableSeries,
 )
+from datacommons_mcp.data_models.settings import (
+    BaseDCSettings,
+    CustomDCSettings,
+    DCSettings,
+)
 from datacommons_mcp.topics import TopicStore, create_topic_store, read_topic_cache
 from datacommons_mcp.utils import filter_by_date
+
+logger = logging.getLogger(__name__)
 
 
 class DCClient:
@@ -299,12 +302,12 @@ class DCClient:
             # TODO(keyurva): This is a hack to filter out internal variables that look like IDs.
             # We should find a better way to do this or fix the schema so they have names.
             # TODO(keyurva): Since we're only supporting topic variables now, should we only keep those that are in the topic store?
-            all_variables = set(
+            all_variables = {
                 var
                 for var in unfiltered_variables
                 if self.topic_store.has_variable(var)
                 or not re.fullmatch(r"dc/[a-z0-9]{10,}", var)
-            )
+            }
             # Store the full filtered list in the cache
             self.variable_cache.put(place_dcid, all_variables)
 
@@ -412,7 +415,9 @@ class DCClient:
                     results_map[query] = []
 
             except Exception as e:  # noqa: BLE001
-                print(f"An unexpected error occurred for query '{query}': {e}")
+                logger.error(
+                    "An unexpected error occurred for query '%s': %s", query, e
+                )
                 results_map[query] = []
 
         return results_map
@@ -426,7 +431,7 @@ class DCClient:
         return len(response.get(parent_place_dcid, [])) > 0
 
     async def fetch_topics_and_variables(
-        self, query: str, place_dcids: list[str] = [], max_results: int = 10
+        self, query: str, place_dcids: list[str] = None, max_results: int = 10
     ) -> dict:
         """
         Search for topics and variables matching a query, optionally filtered by place existence.
@@ -468,7 +473,7 @@ class DCClient:
         topic_members = self._get_topics_members_with_existence(topics, place_dcids)
 
         # Build response structure
-        response = {
+        return {
             "topics": [
                 {
                     "dcid": topic_info["dcid"],
@@ -502,7 +507,6 @@ class DCClient:
                 + [var_info["dcid"] for var_info in variables]
             ),
         }
-        return response
 
     async def _search_entities(self, query: str, max_results: int = 10) -> dict:
         """Search for topics and variables using search_svs."""
@@ -539,12 +543,12 @@ class DCClient:
             )
             unfiltered_variables = response.get(place_dcid, [])
             # Filter out internal variables
-            all_variables = set(
+            all_variables = {
                 var
                 for var in unfiltered_variables
                 if self.topic_store.has_variable(var)
                 or not re.fullmatch(r"dc/[a-z0-9]{10,}", var)
-            )
+            }
             self.variable_cache.put(place_dcid, all_variables)
 
     def _filter_variables_by_existence(
@@ -601,9 +605,10 @@ class DCClient:
         # Check if any direct variable exists for any of the places
         for place_dcid in place_dcids:
             place_variables = self.variable_cache.get(place_dcid)
-            if place_variables is not None:
-                if any(var in place_variables for var in topic_data.variables):
-                    return True
+            if place_variables and any(
+                var in place_variables for var in topic_data.variables
+            ):
+                return True
 
         # Recursively check member topics
         for member_topic in topic_data.member_topics:
@@ -716,12 +721,11 @@ def create_dc_client(settings: DCSettings) -> DCClient:
     """
     if isinstance(settings, BaseDCSettings):
         return _create_base_dc_client(settings)
-    elif isinstance(settings, CustomDCSettings):
+    if isinstance(settings, CustomDCSettings):
         return _create_custom_dc_client(settings)
-    else:
-        raise ValueError(
-            f"Invalid settings type: {type(settings)}. Must be BaseDCSettings or CustomDCSettings"
-        )
+    raise ValueError(
+        f"Invalid settings type: {type(settings)}. Must be BaseDCSettings or CustomDCSettings"
+    )
 
 
 def _create_base_dc_client(settings: BaseDCSettings) -> DCClient:

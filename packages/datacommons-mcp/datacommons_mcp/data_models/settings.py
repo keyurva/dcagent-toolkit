@@ -15,8 +15,8 @@
 Pydantic settings for configuring the MCP server.
 """
 
-import os
-from typing import Union, Literal
+from typing import Any, Literal
+
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
@@ -40,7 +40,7 @@ class BaseDCSettings(BaseSettings):
 
     model_config = _MODEL_CONFIG
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict[str, Any]) -> None:
         super().__init__(**kwargs)
 
     dc_type: Literal["base"] = Field(
@@ -71,7 +71,7 @@ class CustomDCSettings(BaseSettings):
 
     model_config = _MODEL_CONFIG
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict[str, Any]) -> None:
         super().__init__(**kwargs)
 
     dc_type: Literal["custom"] = Field(
@@ -111,7 +111,7 @@ class CustomDCSettings(BaseSettings):
 
     @field_validator("root_topic_dcids", mode="before")
     @classmethod
-    def parse_root_topic_dcids(cls, v):
+    def parse_root_topic_dcids(cls, v: str) -> str | None:
         """Parse comma-separated string into list of strings."""
         if isinstance(v, str):
             if not v.strip():
@@ -131,4 +131,4 @@ class CustomDCSettings(BaseSettings):
 
 
 # Union type for both settings
-DCSettings = Union[BaseDCSettings, CustomDCSettings]
+DCSettings = BaseDCSettings | CustomDCSettings

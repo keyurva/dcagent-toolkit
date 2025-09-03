@@ -1,3 +1,4 @@
+import logging
 import sys
 
 import click
@@ -6,6 +7,7 @@ import click
 @click.group()
 def cli() -> None:
     """DataCommons MCP CLI - Model Context Protocol server for Data Commons."""
+    logging.basicConfig(level=logging.INFO)
 
 
 @cli.command()
@@ -22,8 +24,7 @@ def serve() -> None:
 @serve.command()
 @click.option("--host", default="localhost", help="Host to bind.")
 @click.option("--port", default=8080, help="Port to bind.", type=int)
-@click.option("--reload", is_flag=True, help="Enable auto-reload on code changes.")
-def http(host: str, port: int, reload: bool) -> None:
+def http(host: str, port: int) -> None:
     """Start the MCP server in Streamable HTTP mode."""
     try:
         from datacommons_mcp.server import mcp

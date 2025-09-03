@@ -23,16 +23,11 @@ without making actual network calls.
 
 import os
 from unittest.mock import AsyncMock, Mock, patch
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from unittest.mock import Mock as MockType
 
 import pytest
 from datacommons_client.client import DataCommonsClient
 from datacommons_mcp.clients import DCClient, create_dc_client
 from datacommons_mcp.data_models.enums import SearchScope
-from datacommons_mcp.data_models.settings import BaseDCSettings, CustomDCSettings
 from datacommons_mcp.data_models.observations import (
     DateRange,
     ObservationApiResponse,
@@ -44,6 +39,7 @@ from datacommons_mcp.data_models.observations import (
     SourceMetadata,
     VariableSeries,
 )
+from datacommons_mcp.data_models.settings import BaseDCSettings, CustomDCSettings
 
 
 @pytest.fixture
@@ -966,7 +962,7 @@ class TestCreateDCClient:
             mock_dc_client.return_value = mock_dc_instance
 
             # Act
-            result = create_dc_client(settings)
+            _ = create_dc_client(settings)
 
             # Assert
             # Should compute api_base_url by adding /core/api/v2/

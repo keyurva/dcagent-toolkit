@@ -42,5 +42,4 @@ def get_dc_settings() -> DCSettings:
     # Create the appropriate settings class based on the type
     if settings_selector.dc_type == "custom":
         return CustomDCSettings()
-    else:
-        return BaseDCSettings()
+    return BaseDCSettings()
