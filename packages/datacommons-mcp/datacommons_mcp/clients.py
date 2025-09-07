@@ -16,6 +16,8 @@ Clients module for interacting with Data Commons instances.
 Provides classes for managing connections to both base and custom Data Commons instances.
 """
 
+import asyncio
+import concurrent.futures
 import json
 import logging
 import re
@@ -380,9 +382,17 @@ class DCClient:
 
         # Apply existence filtering if places are specified
         if place_dcids:
-            # Ensure place variables are cached for all places
-            for place_dcid in place_dcids:
-                self._ensure_place_variables_cached(place_dcid)
+            # Ensure place variables are cached for all places in parallel
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                await asyncio.gather(
+                    *[
+                        loop.run_in_executor(
+                            executor, self._ensure_place_variables_cached, place_dcid
+                        )
+                        for place_dcid in place_dcids
+                    ]
+                )
 
             # Filter topics and variables by existence (OR logic)
             topics = self._filter_topics_by_existence(topics, place_dcids)
@@ -502,6 +512,7 @@ class DCClient:
 
         # Check which variables exist for any of the places
         existing_variables = []
+        non_existing_variables = []
         for var in variable_dcids:
             places_with_data = []
             for place_dcid in place_dcids:
@@ -509,12 +520,17 @@ class DCClient:
                 if place_variables is not None and var in place_variables:
                     places_with_data.append(place_dcid)
 
+            variable_info = {"dcid": var, "places_with_data": places_with_data}
             if places_with_data:
-                existing_variables.append(
-                    {"dcid": var, "places_with_data": places_with_data}
-                )
+                existing_variables.append(variable_info)
+            else:
+                non_existing_variables.append(variable_info)
 
-        return existing_variables
+        # Return existing variables if they exist, otherwise return non-existing variables
+        if existing_variables:
+            return existing_variables
+        else:
+            return non_existing_variables
 
     def _filter_topics_by_existence(
         self, topic_dcids: list[str], place_dcids: list[str]
