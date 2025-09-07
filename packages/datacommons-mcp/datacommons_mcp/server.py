@@ -40,6 +40,8 @@ from datacommons_mcp.data_models.search import (
     SearchMode,
     SearchModeType,
     SearchResponse,
+    SearchTopic,
+    SearchVariable,
 )
 from datacommons_mcp.services import (
     get_observations as get_observations_service,
@@ -364,7 +366,7 @@ async def search_indicators(
     query: str,
     mode: SearchModeType | None = SearchMode.BROWSE.value,
     places: list[str] | None = None,
-    bilateral_places: list[str] | None = None,
+    maybe_bilateral: bool = False,
     per_search_limit: int = 10,
 ) -> SearchResponse:
     """Search for topics and variables (collectively called "indicators") across Data Commons.
@@ -398,12 +400,16 @@ async def search_indicators(
 
     **How to Use This Tool:**
 
-    * **For place-constrained queries** like "trade exports to France":
-        - Call with `query="trade exports"`, `mode="lookup"`, and `places=["France"]`
+    * **For non-bilateral place-constrained queries** like "population of France":
+        - Call with `query="population"`, `mode="lookup"`, `places=["France"]`, and `maybe_bilateral=False`
+        - The tool will match indicators and perform existence checks for the specified place
+
+    * **For place-constrained queries** where the agent deems the indicator *could* represent a bilateral relationship like "trade exports to France":
+        - Call with `query="trade exports"`, `mode="lookup"`, `places=["France"]`, and `maybe_bilateral=True`
         - The tool will match indicators and perform existence checks for the specified place
 
     * **For bilateral place-constrained queries** like "trade exports from USA to France":
-        - Call with `query="trade exports"`, `mode="lookup"`, and `bilateral_places=["USA", "France"]`
+        - Call with `query="trade exports"`, `mode="lookup"`, `places=["USA", "France"]`, and `maybe_bilateral=True`
         - The tool will match indicators and perform existence checks for both places
         - In bilateral data, one place (e.g., "France") is encoded in the variable name, while the other place (e.g., "USA") is where we have observations
         - Use `places_with_data` to identify which place has observations
@@ -417,7 +423,7 @@ async def search_indicators(
         - Call with `query="health"` and `mode="browse"` (or omit mode parameter)
         - The tool will return organized topic categories and variables
 
-    * **For non-place-constrained queries** like "what basic health data do you have":
+    * **For non-place-constrained queries** like "what trade data do you have":
         - Call with just the `query` parameter (automatically uses browse mode)
         - No place existence checks are performed
 
@@ -429,9 +435,10 @@ async def search_indicators(
             ** Default: "browse" (if not specified).
         places (list[str], optional): List of place names for filtering and existence checks.
             Examples: ["USA"], ["USA", "Canada"], ["Uttar Pradesh", "Maharashtra", "Tripura", "Bihar", "Kerala"]
-        bilateral_places (list[str], optional): Exactly 2 place names for bilateral relationships.
-            Examples: ["Indonesia", "Malaysia"], ["USA", "France"]
-            Cannot be specified together with `places`.
+        maybe_bilateral (bool, optional): Whether this query could represent bilateral relationships.
+            Set to True for queries that could be bilateral (e.g., "trade exports to france").
+            Set to False for queries about properties of places (e.g., "population of france").
+            Default: False
         per_search_limit (int, optional): Maximum results per search (default 10, max 100). A single query may trigger multiple internal searches.
 
     Returns:
@@ -472,12 +479,42 @@ async def search_indicators(
     - Both modes support place filtering and bilateral queries
     - Both modes use sophisticated query rewriting logic for optimal results
     """
-    # Call the real search_indicators service
-    return await search_indicators_service(
-        client=dc_client,
-        query=query,
-        mode=mode,
-        places=places,
-        bilateral_places=bilateral_places,
-        per_search_limit=per_search_limit,
+    # TODO: Phase 1 - Dummy response for manual testing
+    # Will implement business logic in Phase 2
+    
+    # Convert parameters to string representations for debugging
+    places_str = ",".join(places) if places else "None"
+    
+    return SearchResponse(
+        topics=[
+            SearchTopic(
+                dcid="dummy_topic_1",
+                member_topics=[],
+                member_variables=["dummy_var_1", "dummy_var_2"],
+                places_with_data=None
+            )
+        ],
+        variables=[
+            SearchVariable(
+                dcid="dummy_var_1",
+                places_with_data=["dummy_place_1"]
+            ),
+            SearchVariable(
+                dcid="dummy_var_2", 
+                places_with_data=["dummy_place_2"]
+            )
+        ],
+        dcid_name_mappings={
+            "dummy_topic_1": "DUMMY TOPIC - Phase 1 Testing",
+            "dummy_var_1": "DUMMY VARIABLE 1 - Phase 1 Testing",
+            "dummy_var_2": "DUMMY VARIABLE 2 - Phase 1 Testing",
+            "dummy_place_1": "DUMMY PLACE 1 - Phase 1 Testing",
+            "dummy_place_2": "DUMMY PLACE 2 - Phase 1 Testing",
+            # Tool parameters for debugging
+            "query": f'"{query}"',
+            "mode": f'"{mode}"',
+            "places": f'[{places_str}]',
+            "maybe_bilateral": str(maybe_bilateral),
+            "per_search_limit": str(per_search_limit)
+        }
     )
