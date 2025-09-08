@@ -176,22 +176,20 @@ def _create_search_tasks(
         List of SearchTask objects
     """
     search_tasks = []
+    place_dcids = (
+        [place_dcids_map.get(name) for name in places if place_dcids_map.get(name)]
+        if places and place_dcids_map
+        else []
+    )
 
     if places and maybe_bilateral:
         # Place-specific searches first (one per place)
         for place_name in places:
             place_dcid = place_dcids_map.get(place_name)
             if place_dcid:
-                # Include all DCIDs except the current place
-                other_place_dcids = [
-                    dcid
-                    for name, dcid in place_dcids_map.items()
-                    if name != place_name and dcid
-                ]
+                # Rewrite query to include place name and include all place DCIDs
                 search_tasks.append(
-                    SearchTask(
-                        query=f"{query} {place_name}", place_dcids=other_place_dcids
-                    )
+                    SearchTask(query=f"{query} {place_name}", place_dcids=place_dcids)
                 )
 
         # Original query search last
@@ -202,9 +200,6 @@ def _create_search_tasks(
 
     elif places:
         # Single search task with all place DCIDs (no query rewriting)
-        place_dcids = [
-            place_dcids_map.get(name) for name in places if place_dcids_map.get(name)
-        ]
         search_tasks.append(SearchTask(query=query, place_dcids=place_dcids))
 
     else:

@@ -559,18 +559,18 @@ class TestSearchIndicators:
 
         # Assert the actual queries fetch_indicators was called with
         calls = mock_client.fetch_indicators.call_args_list
-        # The first call should be with USA appended to query, filtered by France
+        # The first call should be with USA appended to query
         assert calls[0].kwargs == {
             "query": "trade exports USA",
             "mode": SearchMode.BROWSE,
-            "place_dcids": ["country/FRA"],
+            "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
-        # The second call should be with France appended to query, filtered by USA
+        # The second call should be with France appended to query
         assert calls[1].kwargs == {
             "query": "trade exports France",
             "mode": SearchMode.BROWSE,
-            "place_dcids": ["country/USA"],
+            "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
         # The third call should be the original query with both place DCIDs
@@ -603,18 +603,18 @@ class TestSearchIndicators:
 
         # Assert the same query rewriting behavior
         calls = mock_client.fetch_indicators.call_args_list
-        # The first call should be with USA appended to query, filtered by France
+        # The first call should be with USA appended to query
         assert calls[0].kwargs == {
             "query": "trade exports USA",
             "mode": SearchMode.LOOKUP,
-            "place_dcids": ["country/FRA"],
+            "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
-        # The second call should be with France appended to query, filtered by USA
+        # The second call should be with France appended to query
         assert calls[1].kwargs == {
             "query": "trade exports France",
             "mode": SearchMode.LOOKUP,
-            "place_dcids": ["country/USA"],
+            "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
         # The third call should be the original query with both place DCIDs

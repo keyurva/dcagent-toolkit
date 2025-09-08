@@ -512,7 +512,6 @@ class DCClient:
 
         # Check which variables exist for any of the places
         existing_variables = []
-        non_existing_variables = []
         for var in variable_dcids:
             places_with_data = []
             for place_dcid in place_dcids:
@@ -520,17 +519,12 @@ class DCClient:
                 if place_variables is not None and var in place_variables:
                     places_with_data.append(place_dcid)
 
-            variable_info = {"dcid": var, "places_with_data": places_with_data}
             if places_with_data:
-                existing_variables.append(variable_info)
-            else:
-                non_existing_variables.append(variable_info)
+                existing_variables.append(
+                    {"dcid": var, "places_with_data": places_with_data}
+                )
 
-        # Return existing variables if they exist, otherwise return non-existing variables
-        if existing_variables:
-            return existing_variables
-        else:
-            return non_existing_variables
+        return existing_variables
 
     def _filter_topics_by_existence(
         self, topic_dcids: list[str], place_dcids: list[str]
