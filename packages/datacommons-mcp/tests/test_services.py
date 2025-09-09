@@ -374,7 +374,8 @@ class TestSearchIndicators:
             client=mock_client,
             query="trade",
             mode="lookup",
-            bilateral_places=["France", "Germany"],
+            places=["France", "Germany"],
+            maybe_bilateral=True,
         )
 
         # Should have deduplicated variables in expected order
@@ -535,8 +536,8 @@ class TestSearchIndicators:
         )
 
     @pytest.mark.asyncio
-    async def test_search_indicators_bilateral_places_behavior(self):
-        """Test bilateral_places parameter behavior across browse and lookup modes."""
+    async def test_search_indicators_maybe_bilateral_behavior(self):
+        """Test maybe_bilateral parameter behavior across browse and lookup modes."""
         mock_client = Mock()
         mock_client.search_places = AsyncMock(
             return_value={"USA": "country/USA", "France": "country/FRA"}
@@ -544,12 +545,13 @@ class TestSearchIndicators:
         mock_client.fetch_indicators = AsyncMock(return_value={})
         mock_client.fetch_entity_names = Mock(return_value={})
 
-        # Test 1: Bilateral places in browse mode
+        # Test 1: Maybe bilateral in browse mode
         result = await search_indicators(
             client=mock_client,
             query="trade exports",
             mode="browse",
-            bilateral_places=["USA", "France"],
+            places=["USA", "France"],
+            maybe_bilateral=True,
         )
         assert result.status == "SUCCESS"
         mock_client.search_places.assert_called_with(["USA", "France"])
@@ -557,25 +559,25 @@ class TestSearchIndicators:
 
         # Assert the actual queries fetch_indicators was called with
         calls = mock_client.fetch_indicators.call_args_list
-        # The first call should be just the base query with both place DCIDs
+        # The first call should be with USA appended to query
         assert calls[0].kwargs == {
-            "query": "trade exports",
+            "query": "trade exports USA",
             "mode": SearchMode.BROWSE,
             "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
-        # The second call should be with USA appended to query, filtered by France
+        # The second call should be with France appended to query
         assert calls[1].kwargs == {
-            "query": "trade exports USA",
-            "mode": SearchMode.BROWSE,
-            "place_dcids": ["country/FRA"],
-            "max_results": 10,
-        }
-        # The third call should be with France appended to query, filtered by USA
-        assert calls[2].kwargs == {
             "query": "trade exports France",
             "mode": SearchMode.BROWSE,
-            "place_dcids": ["country/USA"],
+            "place_dcids": ["country/USA", "country/FRA"],
+            "max_results": 10,
+        }
+        # The third call should be the original query with both place DCIDs
+        assert calls[2].kwargs == {
+            "query": "trade exports",
+            "mode": SearchMode.BROWSE,
+            "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
 
@@ -587,12 +589,13 @@ class TestSearchIndicators:
         mock_client.fetch_indicators = AsyncMock(return_value={})
         mock_client.fetch_entity_names = Mock(return_value={})
 
-        # Test 2: Bilateral places in lookup mode
+        # Test 2: Maybe bilateral in lookup mode
         result = await search_indicators(
             client=mock_client,
             query="trade exports",
             mode="lookup",
-            bilateral_places=["USA", "France"],
+            places=["USA", "France"],
+            maybe_bilateral=True,
         )
         assert result.status == "SUCCESS"
         mock_client.search_places.assert_called_with(["USA", "France"])
@@ -600,25 +603,25 @@ class TestSearchIndicators:
 
         # Assert the same query rewriting behavior
         calls = mock_client.fetch_indicators.call_args_list
-        # The first call should be just the base query with both place DCIDs
+        # The first call should be with USA appended to query
         assert calls[0].kwargs == {
-            "query": "trade exports",
+            "query": "trade exports USA",
             "mode": SearchMode.LOOKUP,
             "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
-        # The second call should be with USA appended to query, filtered by France
+        # The second call should be with France appended to query
         assert calls[1].kwargs == {
-            "query": "trade exports USA",
-            "mode": SearchMode.LOOKUP,
-            "place_dcids": ["country/FRA"],
-            "max_results": 10,
-        }
-        # The third call should be with France appended to query, filtered by USA
-        assert calls[2].kwargs == {
             "query": "trade exports France",
             "mode": SearchMode.LOOKUP,
-            "place_dcids": ["country/USA"],
+            "place_dcids": ["country/USA", "country/FRA"],
+            "max_results": 10,
+        }
+        # The third call should be the original query with both place DCIDs
+        assert calls[2].kwargs == {
+            "query": "trade exports",
+            "mode": SearchMode.LOOKUP,
+            "place_dcids": ["country/USA", "country/FRA"],
             "max_results": 10,
         }
 
@@ -632,35 +635,32 @@ class TestSearchIndicators:
         mock_client.fetch_indicators = AsyncMock(return_value={"variables": []})
         mock_client.fetch_entity_names = Mock(return_value={})
 
-        # Test both places and bilateral_places specified (should raise ValueError)
-        with pytest.raises(
-            ValueError, match="Cannot specify both 'places' and 'bilateral_places'"
-        ):
-            await search_indicators(
-                client=mock_client,
-                query="test",
-                places=["USA"],
-                bilateral_places=["USA", "France"],
-            )
+        # Test maybe_bilateral=True with places (should work)
+        result = await search_indicators(
+            client=mock_client,
+            query="test",
+            places=["USA", "France"],
+            maybe_bilateral=True,
+        )
+        assert result.status == "SUCCESS"
+        assert mock_client.fetch_indicators.call_count == 3  # len(places) + 1
 
-        # Test bilateral_places with != 2 items (should raise ValueError)
-        with pytest.raises(
-            ValueError, match="bilateral_places must contain exactly 2 place names"
-        ):
-            await search_indicators(
-                client=mock_client,
-                query="test",
-                bilateral_places=["USA"],  # Only 1 place
-            )
+        # Test maybe_bilateral=False with places (should work)
+        mock_client.reset_mock()
+        mock_client.search_places = AsyncMock(
+            return_value={"USA": "country/USA", "France": "country/FRA"}
+        )
+        mock_client.fetch_indicators = AsyncMock(return_value={"variables": []})
+        mock_client.fetch_entity_names = Mock(return_value={})
 
-        with pytest.raises(
-            ValueError, match="bilateral_places must contain exactly 2 place names"
-        ):
-            await search_indicators(
-                client=mock_client,
-                query="test",
-                bilateral_places=["USA", "France", "Germany"],  # 3 places
-            )
+        result = await search_indicators(
+            client=mock_client,
+            query="test",
+            places=["USA", "France"],
+            maybe_bilateral=False,
+        )
+        assert result.status == "SUCCESS"
+        assert mock_client.fetch_indicators.call_count == 1  # single search
 
         # Test valid combinations (should not raise)
         # Single place
@@ -679,11 +679,12 @@ class TestSearchIndicators:
         )
         assert result.status == "SUCCESS"
 
-        # Bilateral places
+        # Maybe bilateral with places
         result = await search_indicators(
             client=mock_client,
             query="test",
-            bilateral_places=["USA", "France"],
+            places=["USA", "France"],
+            maybe_bilateral=True,
         )
         assert result.status == "SUCCESS"
 

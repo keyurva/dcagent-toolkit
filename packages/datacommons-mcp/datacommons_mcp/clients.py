@@ -16,6 +16,7 @@ Clients module for interacting with Data Commons instances.
 Provides classes for managing connections to both base and custom Data Commons instances.
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -380,9 +381,13 @@ class DCClient:
 
         # Apply existence filtering if places are specified
         if place_dcids:
-            # Ensure place variables are cached for all places
-            for place_dcid in place_dcids:
-                self._ensure_place_variables_cached(place_dcid)
+            # Ensure place variables are cached for all places in parallel
+            await asyncio.gather(
+                *(
+                    asyncio.to_thread(self._ensure_place_variables_cached, place_dcid)
+                    for place_dcid in place_dcids
+                )
+            )
 
             # Filter topics and variables by existence (OR logic)
             topics = self._filter_topics_by_existence(topics, place_dcids)

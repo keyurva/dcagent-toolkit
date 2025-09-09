@@ -40,6 +40,8 @@ from datacommons_mcp.data_models.search import (
     SearchMode,
     SearchModeType,
     SearchResponse,
+    SearchTopic,
+    SearchVariable,
 )
 from datacommons_mcp.services import (
     get_observations as get_observations_service,
@@ -366,7 +368,7 @@ async def search_indicators(
     query: str,
     mode: SearchModeType | None = SearchMode.BROWSE.value,
     places: list[str] | None = None,
-    bilateral_places: list[str] | None = None,
+    maybe_bilateral: bool = False,
     per_search_limit: int = 10,
 ) -> SearchResponse:
     """Search for topics and variables (collectively called "indicators") across Data Commons.
@@ -400,14 +402,23 @@ async def search_indicators(
 
     **How to Use This Tool:**
 
-    * **For place-constrained queries** like "trade exports to France":
-        - Call with `query="trade exports"`, `mode="lookup"`, and `places=["France"]`
+    * The examples below exclude the mode parameter intentionally. The calls can be made in both modes. Choose the mode based on the mode selection guidelines above.
+
+    * **For non-bilateral place-constrained queries** like "population of France":
+        - Call with `query="population"`, `places=["France"]`, and `maybe_bilateral=False`
         - The tool will match indicators and perform existence checks for the specified place
 
-    * **For bilateral place-constrained queries** like "trade exports from USA to France":
-        - Call with `query="trade exports"`, `mode="lookup"`, and `bilateral_places=["USA", "France"]`
-        - The tool will match indicators and perform existence checks for both places
-        - In bilateral data, one place (e.g., "France") is encoded in the variable name, while the other place (e.g., "USA") is where we have observations
+    * **For place-constrained queries** where the agent deems the indicator *could* represent a bilateral relationship like "trade exports to France":
+        - Call with `query="trade exports"`, `places=["France"]`, and `maybe_bilateral=True`
+        - The tool will match indicators and perform existence checks for the specified place
+
+    * **For bilateral place-constrained queries**:
+        - between two places like "trade exports from USA to France":
+          + Call with `query="trade exports"`, `places=["USA", "France"]`, and `maybe_bilateral=True`
+        - between multiple places like "trade exports from USA, Germany and UK to France":
+          + Call with `query="trade exports"`, `places=["USA", "Germany", "UK", "France"]`, and `maybe_bilateral=True`
+        - The tool will match indicators and perform existence checks for the specified places
+        - In bilateral data, one place (e.g., "France") is encoded in the variable name, while the other place (e.g., "USA", "Germany", "UK") is where we have observations
         - Use `places_with_data` to identify which place has observations
 
     * **For child entity sampling** like "population of Indian states":
@@ -416,11 +427,11 @@ async def search_indicators(
         - Results are indicative of broader child entity coverage
 
     * **For exploratory queries** like "what basic health data do you have":
-        - Call with `query="health"` and `mode="browse"` (or omit mode parameter)
+        - Call with `query="basic health"`
         - The tool will return organized topic categories and variables
 
-    * **For non-place-constrained queries** like "what basic health data do you have":
-        - Call with just the `query` parameter (automatically uses browse mode)
+    * **For non-place-constrained queries** like "what trade data do you have":
+        - Call with `query="trade"`
         - No place existence checks are performed
 
     Args:
@@ -431,9 +442,10 @@ async def search_indicators(
             ** Default: "browse" (if not specified).
         places (list[str], optional): List of place names for filtering and existence checks.
             Examples: ["USA"], ["USA", "Canada"], ["Uttar Pradesh", "Maharashtra", "Tripura", "Bihar", "Kerala"]
-        bilateral_places (list[str], optional): Exactly 2 place names for bilateral relationships.
-            Examples: ["Indonesia", "Malaysia"], ["USA", "France"]
-            Cannot be specified together with `places`.
+        maybe_bilateral (bool, optional): Whether this query could represent bilateral relationships.
+            Set to True for queries that could be bilateral (e.g., "trade exports to france").
+            Set to False for queries about properties of places (e.g., "population of france").
+            Default: False
         per_search_limit (int, optional): Maximum results per search (default 10, max 100). A single query may trigger multiple internal searches.
 
     Returns:
@@ -480,6 +492,6 @@ async def search_indicators(
         query=query,
         mode=mode,
         places=places,
-        bilateral_places=bilateral_places,
+        maybe_bilateral=maybe_bilateral,
         per_search_limit=per_search_limit,
     )
