@@ -45,6 +45,8 @@ from datacommons_mcp.data_models.settings import (
 from datacommons_mcp.topics import TopicStore, create_topic_store, read_topic_cache
 from datacommons_mcp.utils import filter_by_date
 
+from datacommons_mcp._constrained_vars import place_statvar_constraint_mapping
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +59,7 @@ class DCClient:
         custom_index: str | None = None,
         sv_search_base_url: str = "https://datacommons.org",
         topic_store: TopicStore | None = None,
+        _place_like_constraints: list[str] | None = None,
     ) -> None:
         """
         Initialize the DCClient with a DataCommonsClient and search configuration.
@@ -68,6 +71,9 @@ class DCClient:
             custom_index: Index to use for custom DC searches (None for base DC)
             sv_search_base_url: Base URL for SV search endpoint
             topic_store: Optional TopicStore for caching
+
+            # TODO(@jm-rivera): Remove this parameter once new endpoint is live.
+            _place_like_constraints: Optional list of place-like constraints
         """
         self.dc = dc
         self.search_scope = search_scope
@@ -81,6 +87,11 @@ class DCClient:
         if topic_store is None:
             topic_store = TopicStore(topics_by_dcid={}, all_variables=set())
         self.topic_store = topic_store
+
+        if _place_like_constraints:
+            self._compute_place_like_statvar_store(constraints=_place_like_constraints)
+        else:
+            self._place_like_statvar_store = dict()
 
     def _compute_search_indices(self) -> list[str]:
         """Compute and validate search indices based on the configured search_scope.
@@ -102,6 +113,14 @@ class DCClient:
             indices.append(self.base_index)
 
         return indices
+
+    def _compute_place_like_statvar_store(self, constraints: list[str]):
+        """Compute and cache place-like to statistical variable mappings.
+        # TODO (@jm-rivera): Remove once new endpoint is live.
+        """
+        self._place_like_statvar_store = place_statvar_constraint_mapping(
+            client=self.dc, place_like_constraints=constraints
+        )
 
     async def fetch_obs(
         self, request: ObservationToolRequest
@@ -511,7 +530,10 @@ class DCClient:
         for var in variable_dcids:
             places_with_data = []
             for place_dcid in place_dcids:
-                place_variables = self.variable_cache.get(place_dcid)
+                # TODO (@jm-rivera): Remove place-like check once new search endpoint is live.
+                place_variables = self.variable_cache.get(
+                    place_dcid
+                ) | self._place_like_statvar_store.get(place_dcid, set())
                 if place_variables is not None and var in place_variables:
                     places_with_data.append(place_dcid)
 
@@ -580,7 +602,10 @@ class DCClient:
 
         # Check direct variables
         for place_dcid in place_dcids:
-            place_variables = self.variable_cache.get(place_dcid)
+            # TODO (@jm-rivera): Remove place-like check once new search endpoint is live.
+            place_variables = self.variable_cache.get(
+                place_dcid
+            ) | self._place_like_statvar_store.get(place_dcid, set())
             if place_variables is not None:
                 matching_vars = [
                     var for var in topic_data.variables if var in place_variables
@@ -720,4 +745,6 @@ def _create_custom_dc_client(settings: CustomDCSettings) -> DCClient:
         custom_index=settings.custom_index,
         sv_search_base_url=settings.custom_dc_url,  # Use custom_dc_url as sv_search_base_url
         topic_store=topic_store,
+        # TODO (@jm-rivera): Remove place-like parameter new search endpoint is live.
+        _place_like_constraints=settings.place_like_constraints,
     )
