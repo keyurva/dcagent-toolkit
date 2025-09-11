@@ -34,15 +34,16 @@ from datacommons_mcp.data_models.charts import (
     SingleVariableChart,
 )
 from datacommons_mcp.data_models.observations import (
+    ObservationDateType,
     ObservationToolResponse,
 )
 from datacommons_mcp.data_models.search import (
     SearchResponse,
-    SearchTopic,
-    SearchVariable,
 )
 from datacommons_mcp.services import (
     get_observations as get_observations_service,
+)
+from datacommons_mcp.services import (
     search_indicators as search_indicators_service,
 )
 
@@ -70,10 +71,10 @@ async def get_observations(
     place_dcid: str | None = None,
     place_name: str | None = None,
     child_place_type: str | None = None,
-    source_id_override: str | None = None,
-    period: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
+    source_override: str | None = None,
+    date: str = ObservationDateType.LATEST.value,
+    date_range_start: str | None = None,
+    date_range_end: str | None = None,
 ) -> ObservationToolResponse:
     """Fetches observations for a statistical variable from Data Commons.
 
@@ -102,33 +103,37 @@ async def get_observations(
           Only proceed with `get_observations` if `validate_child_place_types` confirms that the `child_place_type` is valid for the specified parent place.
 
     * **Data Volume Constraint**: When using **Child Places Mode** (when `child_place_type` is set), you **must** be conservative with your date range to avoid requesting too much data.
-        * Avoid requesting `'all'` data via the `period` parameter.
+        * Avoid requesting `'all'` data via the `date` parameter.
         * **Instead, you must either request the `'latest'` data or provide a specific, bounded date range.**
 
     * **Date Filtering**: The tool filters observations by date using the following priority:
-        1.  **`period`**: If you provide the `period` parameter ('all' or 'latest'), it takes top priority.
-        2.  **Date Range**: If `period` is not provided, you must specify a custom range using **both** `start_date` and `end_date`.
+        1.  **`date`**: The `date` parameter is required and can be one of the enum values 'all', 'latest', 'range', or a date string in the format 'YYYY', 'YYYY-MM', or 'YYYY-MM-DD'.
+        2.  **Date Range**: If `date` is set to 'range', you must specify a date range using `date_range_start` and/or `date_range_end`.
+            * If only `date_range_start` is specified, then the response will contain all observations starting at and after that date (inclusive).
+            * If only `date_range_end` is specified, then the response will contain all observations before and up to that date (inclusive).
+            * If both are specified, the response contains observations within the provided range (inclusive).
             * Dates must be in `YYYY`, `YYYY-MM`, or `YYYY-MM-DD` format.
-            * To get data for a single date, set `start_date` and `end_date` to the same value. For example, to get data for 2025, use `start_date="2025"` and `end_date="2025"`.
-        3.  **Default Behavior**: If you do not provide **any** date parameters (`period`, `start_date`, or `end_date`), the tool will automatically fetch only the `'latest'` observation.
+        3.  **Default Behavior**: If you do not provide **any** date parameters (`date`, `date_range_start`, or `date_range_end`), the tool will automatically fetch only the `'latest'` observation.
 
     Args:
       variable_dcid (str, required): The unique identifier (DCID) of the statistical variable.
       place_dcid (str, optional): The DCID of the place.
       place_name (str, optional): The common name of the place. Ex: "United States", "India", "NYC". Ignored if `place_dcid` is set.
       child_place_type (str, optional): The type of child places to get data for. **Use this to switch to Child Places Mode.**
-      source_id_override (str, optional): An optional facet ID to force the use of a specific data source.
-      period (str, optional): A special period filter. Accepts "all" or "latest". Overrides date range.
-      start_date (str, optional): The start date for a custom range. **Used only with `end_date` and ignored if `period` is set.**
-      end_date (str, optional): The end date for a custom range. **Used only with `start_date` and ignored if `period` is set.**
+      source_override (str, optional): An optional source ID to force the use of a specific data source.
+      date (str, optional): An optional date filter. Accepts 'all', 'latest', 'range', or single date values of the format 'YYYY', 'YYYY-MM', or 'YYYY-MM-DD'. Defaults to 'latest' if no date parameters are provided.
+      date_range_start (str, optional): The start date for a range (inclusive). **Used only if `date` is set to'range'.**
+      date_range_end (str, optional): The end date for a range (inclusive). **Used only if `date` is set to'range'.**
 
     Returns:
-      dict: A dictionary containing the request status and data.
+        The fetched observation data including:
+        - `variable`: Details about the statistical variable requested.
+        - `place_observations`: A list of observations, one entry per place. Each entry contains:
+            - `place`: Details about the observed place (DCID, name, type).
+            - `time_series`: A list of `(date, value)` tuples, where `date` is a string (e.g., "2022-01-01") and `value` is a float.
+        - `source_metadata`: Information about the primary data source used.
+        - `alternative_sources`: Details about other available data sources.
 
-      **How to Process the Response:**
-      1.  **Check Status**: First, check the `status` field. If it's "ERROR" or "NO_DATA_FOUND", inform the user accordingly using the `message`.
-      2.  **Extract Data**: The data is inside `data['data_by_variable']`. Each key is a `variable_id`. The `observations` list contains the actual data points: `[entity_id, date, value]`.
-      3.  **Make it Readable**: Use the `data['lookups']['id_name_mappings']` dictionary to convert `variable_id` and `entity_id` from cryptic IDs to human-readable names.
     """
     return await get_observations_service(
         client=dc_client,
@@ -136,10 +141,10 @@ async def get_observations(
         place_dcid=place_dcid,
         place_name=place_name,
         child_place_type=child_place_type,
-        source_id_override=source_id_override,
-        period=period,
-        start_date=start_date,
-        end_date=end_date,
+        source_override=source_override,
+        date=date,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
     )
 
 
