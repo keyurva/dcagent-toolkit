@@ -435,13 +435,22 @@ async def search_indicators(
         - Use `places_with_data` to identify which place has observations
 
     * **For child entity sampling** like "population of Indian states":
-        - Call with `query="population"` and `places=["Uttar Pradesh", "Maharashtra", "Tripura", "Bihar", "Kerala"]`
+        - Call with the indicator, 5-6 diverse child entities and the parent place as well. The latter will be useful to know the DCID of the parent place.
+        - Call with `query="population"` and `places=["Uttar Pradesh", "Maharashtra", "Tripura", "Bihar", "Kerala", "India"]`
         - Sample 5-6 diverse child entities as representative proxy for all child entities
         - Results are indicative of broader child entity coverage
 
     * **For exploratory queries** like "what basic health data do you have":
         - Call with `query="basic health"`
         - The tool will return organized topic categories and variables
+
+    * **For unqualified exploratory queries** like "what data do you have?":
+        - CRITICAL: For such unqualified exploratory queries, ALWAYS ASK the user to specify a place first.
+        - e.g., "Which place would you like to explore? For example, 'World', 'Africa', 'India', 'California', 'Paris', etc."
+        - If you still make a call without a place, the tool will return root topics for the World.
+        - Call with `query=""` (empty string) and `places=[user_specified_place]`
+        - Returns root topics if available to give users an overview of available data for that place
+        - If no topics are available, returns empty response
 
     * **For non-place-constrained queries** like "what trade data do you have":
         - Call with `query="trade"`
