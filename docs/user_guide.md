@@ -1,12 +1,12 @@
-# Get Started with Data Commons MCP Tools
+# Data Commons MCP User Guide
 
 ## Overview
 
-The Data Commons Model Context Protocol (MCP) tools give AI agents access to the Data Commons knowledge graph and returns data related to statistical variables, topics, and observations. It allows end users to formulate complex natural-language queries interactively, get data in textual, structured or unstructured formats, and download the data as desired. For example, depending on the agent, a user can answer high-level questions such as "give me the economic indicators of the BRICS countries", view simple tables, and download a CSV file of the data in tabular format.
+The [Data Commons](https://datacommons.org) [Model Context Protocol (MCP)](https://modelcontextprotocol.io/docs/getting-started/intro) service gives AI agents access to the Data Commons knowledge graph and returns data related to statistical variables, topics, and observations. It allows end users to formulate complex natural-language queries interactively, get data in textual, structured or unstructured formats, and download the data as desired. For example, depending on the agent, a user can answer high-level questions such as "give me the economic indicators of the BRICS countries", view simple tables, and download a CSV file of the data in tabular format.
 
 The MCP server returns data from datacommons.org by default or can be configured for a Custom Data Commons instance. 
 
-The server is a Python binary based on the [FastMCP 2.0 framework](https://gofastmcp.com). It runs in a Python virtual environment. A prebuilt package is available at https://pypi.org/project/datacommons-mcp/.
+The server is a Python binary based on the [FastMCP 2.0 framework](https://gofastmcp.com). A prebuilt package is available at https://pypi.org/project/datacommons-mcp/.
 
 At this time, there is no centrally deployed server; you run your own server, and any client you want to connect to it.
 
@@ -20,21 +20,19 @@ The server currently supports the following tools:
 - `get_observations`: Fetches statistical data for a given variable and place.
 - `validate_child_place_types`: Validates child place types for a given parent place.
 
-Tool APIs are defined in https://github.com/datacommonsorg/agent-toolkit/blob/main/packages/datacommons-mcp/datacommons_mcp/server.py. 
-
 > Tip: If you want a deeper understanding of how the tools work, you may use the [MCP Inspector](https://modelcontextprotocol.io/legacy/tools/inspector) to make tool calls directly; see [Test with MCP Inspector](#test-with-mcp-inspector) for details.
 
 ### Clients
 
 To connect to the Data Commons MCP Server, you can use any available AI application that supports MCP, or your own custom agent. 
 
-The server supports both standard MCP transport protocols:
+The server supports both standard MCP [transport protocols](https://modelcontextprotocol.io/docs/learn/architecture#transport-layer):
 - Stdio: For clients that connect directly using local processes
 - Streamable HTTP: For clients that connect remotely or otherwise require HTTP (e.g. Typescript)
 
 See [Basic usage](#basic-usage) below for how to use the server with Google-based clients over Stdio.
 
-For an end-to-end tutorial using a server and agent over HTTP in the cloud, see the sample Data Commons [Colab notebook]().
+For an end-to-end tutorial using a server and agent over HTTP in the cloud, see the sample Data Commons Colab notebook, [Try Data Commons MCP Tools with a Custom Agent](https://github.com/datacommonsorg/agent-toolkit/blob/main/notebooks/datacommons_mcp_tools_with_custom_agent.ipynb).
 
 ### Unsupported features
 
@@ -45,13 +43,15 @@ At the current time, the following are not supported:
 
 ### Feedback
 
-If you'd like to provide feedback on the Data Commons MCP tools, please see this [FAQ entry](https://datacommons.org/faq#feedback) on how to file bugs or feature requests. 
+- [FAQ entry](https://datacommons.org/faq#:~:text=Q%3A%20How%20can%20I%20send%20feedback%20about%20Data%20Commons%3F) on how to file bugs or feature requests
 
-## Basic usage: run a local agent and server
+## Basic usage
+
+This section shows you how to run a local agent that kicks off the server in a subprocess.
 
 Below we provide specific instructions for the following agents:
 - [Gemini CLI](https://github.com/google-gemini/gemini-cli) -- best for playing with the server; requires minimal setup.
-- A sample agent based on the Google [Agent Development Kit](https://google.github.io/adk-docs/) and [Gemini Flash 2.5](https://deepmind.google/models/gemini/flash/) -- best for interacting with a sample ADK-based web agent; requires some additional setup.
+- A sample basic agent based on the Google [Agent Development Kit](https://google.github.io/adk-docs/) and [Gemini Flash 2.5](https://deepmind.google/models/gemini/flash/) -- best for interacting with a sample ADK-based web agent; requires some additional setup.
 
 For other clients/agents, see the relevant documentation; you should be able to reuse the commands and arguments detailed below.
 
@@ -70,7 +70,7 @@ For all instances:
 
 ### Configure environment variables
 
-#### Connecting to datacommons.org
+#### Base Data Commons (datacommons.org)
 
 For basic usage against datacommons.org, set the required `DC_API_KEY` in your shell/startup script (e.g. `.bashrc`).
 ```
@@ -95,19 +95,13 @@ To set variables using a `.env` file:
    - `DC_TYPE`: Set to `custom`.
    - `CUSTOM_DC_URL`: Uncomment and set to the URL of your instance. 
 1. Optionally, set other variables.
+1. Save the file.
 
 ### Use Gemini CLI
 
 To install Gemini CLI, see instructions at https://github.com/google-gemini/gemini-cli#quick-install. 
 
-We recommend that you use the Gemini API key [authentication option](https://github.com/google-gemini/gemini-cli?tab=readme-ov-file#-authentication-options) if you already have a Google Cloud Platform project, so you don't have to log in for every session. To do so:
-1. Go to https://aistudio.google.com/ and create a key. 
-1. Set the follwing environment variable:
-   ```
-   export GEMINI_API_KEY="<your key>"
-   ```
-
-To configure Gemini CLI to recognize the Data Commons server, edit your `~/.gemini/settings.json` file (or `settings.json` file in another directory) to add the following:
+We recommend that you use the [Gemini API key](https://github.com/google-gemini/gemini-cli?tab=readme-ov-file#option-2-gemini-api-key) or [Vertex API key](https://github.com/google-gemini/gemini-cli?tab=readme-ov-file#option-3-vertex-ai) authentication options if you already have a Google Cloud Platform project, so you don't have to log in for every session. 
 
 ```json
 {
@@ -122,15 +116,14 @@ To configure Gemini CLI to recognize the Data Commons server, edit your `~/.gemi
         "stdio"
       ],
       "env": {
-        "DC_API_KEY": "<your key>"
-      }
+        "DC_API_KEY": "<your Data Commons API key>"
+      },
+      "trust": true
     }
   }
 }
 ```
-If desired, you can modify the following settings:
-- `selectedAuthType`: If you don't have a GCP project and want to use OAuth with your Google account, set this to `oauth-personal`.
-- `command`: If you want to run packages from locally cloned stored Python code, set this to `uv` and add `run` to the list of `args`, 
+If you don't have a GCP project and want to use OAuth with your Google account, set `selectedAuthType` to `oauth-personal`.
 
 You can now run the `gemini` command from any directory and it will automatically kick off the MCP server, with the correct environment variables.
 
@@ -142,24 +135,11 @@ Once Gemini CLI has started up, you can immediately begin sending natural-langua
 
 ### Use the sample agent
 
-xxx is a basic agent for interacting with the MCP Server. To run it locally:
+We provide a basic agent for interacting with the MCP Server in [packages/datacommons-mcp/examples/sample_agents/basic_agent](https://github.com/datacommonsorg/agent-toolkit/tree/main/packages/datacommons-mcp/examples/sample_agents/basic_agent). To run it locally:
 
 1. Clone the Data Commons `agent-toolkit` repo: from the desired directory where you would like to save the code, run:
    ```
    git clone https://github.com/datacommonsorg/agent-toolkit.git
-   ```
-1. When the files are downloaded, navigate to the subdirectory `packages/datacommons_agents/`. For example:
-   ```
-   cd ~/agent-toolkit/packages/datacommons_agents/
-   ```
-1. Copy the `.env_sample` file to a new file `called `.env`:
-   ```
-   cp .env.sample .env
-   ```
-1. Set the required variables and save the file.
-1. Run the following command to start the web agent and server:
-   ```
-   uv run adk web ./datacommons-agents
    ```
 1. more coming...
 
@@ -167,8 +147,8 @@ xxx is a basic agent for interacting with the MCP Server. To run it locally:
 
 We provide two sample Google Agent Development Kit-based agents you can use as inspiration for building your own agent:
 
-- [Building an Agent with Data Commons Tools]() is a Google Colab tutorial that shows how to build an ADK Python agent step by step. 
-- The sample [basic agent]() is a simple Python ADK agent you can use to develop locally. See [Use the sample agent](#use-the-sample-agent) above for details.
+- [Try Data Commons MCP Tools with a Custom Agent](https://github.com/datacommonsorg/agent-toolkit/blob/main/notebooks/datacommons_mcp_tools_with_custom_agent.ipynb) is a Google Colab tutorial that shows how to build an ADK Python agent step by step. 
+- The sample [basic agent](https://github.com/datacommonsorg/agent-toolkit/tree/main/packages/datacommons-mcp/examples/sample_agents/basic_agent) is a simple Python ADK agent you can use to develop locally. See [Use the sample agent](#use-the-sample-agent) above for details.
 
 ### Test with MCP Inspector
 
@@ -177,31 +157,24 @@ If you're interested in getting a deeper understanding of Data Commons tools and
 To use it:
 
 1. If not already installed on your system, install [`node.js`](https://nodejs.org/en/download) and [`uv`](https://github.com/astral-sh/uv/blob/main/README.md).
-1. Ensure you've set up the relevant server [environment variables](#environment-variables).
-1. To run the server using the PyPi package, from any directory, run:
+1. Ensure you've set up the relevant server [environment variables](#environment-variables). If you're using a `.env` file, go to the directory where the file is stored.
+1. Run:
    ```
    npx @modelcontextprotocol/inspector uvx datacommons-mcp serve stdio
-   ```
-   To run the server using a cloned local package, from the `agent-toolkit/packages/datacommons-mcp` directory, run:
-   ```
-   npx @modelcontextprotocol/inspector uv run datacommons-mcp serve stdio
    ```
 1. Open the Inspector via the pre-filled session token URL which is printed to terminal on server startup. It should look like `http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=<session token>`. 
 1. Click on the link to open the browser. The tool is prepopulated with all relevant variables.
 1. In the left pane, click **Connect**. 
+1. more coming...
 
 ## Use a remote server/client
 
 ### Run a standalone server
 
-1. Ensure you've set up the relevant server [environment variables](#environment-variables). 
-1. To run the server using the PyPi package, from any directory, run:
+1. Ensure you've set up the relevant server [environment variables](#environment-variables). If you're using a `.env` file, go to the directory where the file is stored.
+1. Run:
    ```
    uvx datacommons-mcp serve http [--port <port>]
-   ```
-   To run the server using a cloned local package, from the `agent-toolkit/packages/datacommons-mcp` directory, run:
-   ```
-   uv run datacommons-mcp serve http [--port <port>]
    ```
 By default, the port is 8080 if you don't set it explicitly.
 
@@ -237,8 +210,3 @@ To configure the sample agent xxx to connect to a remote Data Commons server ove
     ...
 )
 ```
-
-
-
-
-

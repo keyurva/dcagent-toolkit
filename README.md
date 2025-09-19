@@ -1,20 +1,18 @@
 # Data Commons Agent Toolkit
 
-This repo contains the MCP tools for fetching public information from [Data Commons](https://datacommons.org/).
-
-## MCP Server
-
-[Data Commons MCP Server package](packages/datacommons-mcp/)
-* PyPI: https://pypi.org/project/datacommons-mcp
-
+This repo contains MCP tools and sample agents for fetching public information from [Data Commons](https://datacommons.org/).
 
 ## Docs
 
-* [Getting Started with Data Commons MCP Tools](docs/get_started.md)
-* [Sample Agents](docs/sample_agents.md)
+* [Quickstart with Gemini CLI](docs/quickstart.md)
+* [User guide](docs/user_guide.md)
 
-### Internal Development Docs
+## MCP Server
 
-* [Developer's Guide](docs/dev.md)
-* [Evaluation Guide](docs/evals.md)
+* [Data Commons MCP Server package](packages/datacommons-mcp/)
+* PyPI: [datacommons-mcp](https://pypi.org/project/datacommons-mcp)
+
+### Sample agents
+
+* [Data Commons sample agents](packages/datacommons-mcp/examples/sample_agents)
 
