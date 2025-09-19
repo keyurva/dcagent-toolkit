@@ -21,28 +21,5 @@ export GEMINI_API_KEY="<your-gemini-key>"
 Run the pytest evaluation suite.
 
 ```bash
-uv run pytest -k "eval"
-```
-
-## Manual Agent Execution
-
-Use the ADK runner for manual execution or debugging.
-
-
-1.  ADK Web Runner (All Agents)
-
-Starts a local web server for all agents in evals/.
-
-```bash
-# Run from repo root
-uv run adk web ./packages/datacommons-mcp/evals/
-```
-
-2.  Command-line Agent Run (Single Agent)
-
-Run a single agent directly.
-
-```
-# Example: run test_tool_agent from repo root
-uv run adk run ./packages/datacommons-mcp/evals/test_tool_agent
+uv run --extra test pytest -k "eval"
 ```

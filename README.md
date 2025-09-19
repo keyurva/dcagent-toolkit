@@ -11,8 +11,10 @@ This repo contains the MCP tools for fetching public information from [Data Comm
 ## Docs
 
 * [Getting Started with Data Commons MCP Tools](docs/get_started.md)
+* [Sample Agents](docs/sample_agents.md)
 
 ### Internal Development Docs
+
 * [Developer's Guide](docs/dev.md)
 * [Evaluation Guide](docs/evals.md)
 
