@@ -413,6 +413,11 @@ async def search_indicators(
 
     * **Examples:** `"health grants"`, `"carbon emissions"`, `"unemployment rate"`
 
+    * **CRITICAL RULES:**
+      * Search for one concept at a time to get focused results.
+        - Instead of: "health and unemployment rate" (single search)
+        - Use: "health" and "unemployment rate" as separate searches
+
     **2. `places` (list[str], optional)**
 
     * A list of English, human-readable place names to filter indicators by.
@@ -431,7 +436,7 @@ async def search_indicators(
 
       * When searching for indicators related to child places within a larger geographic entity (e.g., states within a country, or countries
      within a continent/the world), you MUST include the parent entity and a diverse sample of 5-6 of its child places in the `places` list.
-     This ensures the discovery of indicators that have data at the child place level. Refer to 'Recipe 4: Sampling Child Places' for detailed 
+     This ensures the discovery of indicators that have data at the child place level. Refer to 'Recipe 4: Sampling Child Places' for detailed
      examples.
 
     **How to Use the `places` Parameter (Recipes):**
@@ -442,23 +447,9 @@ async def search_indicators(
 
       * **Call:** `query="population"`, `places=["France"]`, `maybe_bilateral=False`
 
-    * **Recipe 2: Potentially Bilateral Data**
+    * **Recipe 2: Sampling Child Places**
 
-      * **Goal:** Find an indicator that *might* be bilateral (e.g., "trade exports to France"). The data might be *about* France, or it might be *from* other places *to* France.
-
-      * **Call:** `query="trade exports"`, `places=["France"]`, `maybe_bilateral=True`
-
-    * **Recipe 3: Known Bilateral Data (Multi-Place)**
-
-      * **Goal:** Find data *between* places (e.g., "trade from USA and Germany to France").
-
-      * **Call:** `query="trade exports"`, `places=["USA", "Germany", "France"]`, `maybe_bilateral=True`
-
-      * **Note:** The response's `places_with_data` will show which of "USA", "Germany", or "France" the observations are attached to. The other places are often part of the variable name itself.
-
-    * **Recipe 4: Sampling Child Places**
-
-      * **Goal:** Check data availability for a *type* of child place (e.g., "population of Indian states" or "GDP of all countries").
+      * **Goal:** Check data availability for a *type* of child place (e.g., "population of Indian states" or "highest GDP countries" or "top 5 US states with lowest unemployment rate").
 
       * **Action:** You must *proxy* this request by sampling a few children.
 
@@ -480,6 +471,21 @@ async def search_indicators(
             2. Include 5-6 *diverse* child countries (e.g., from different continents, different economies).
             3. This sampling helps discover the correct indicator DCID used for the `Country` place type, which you can then use in other tools (like `fetch_data` with a parent=`World` and child_type=`Country`).
 
+
+    * **Recipe 3: Potentially Bilateral Data**
+
+      * **Goal:** Find an indicator that *might* be bilateral (e.g., "trade exports to France"). The data might be *about* France, or it might be *from* other places *to* France.
+
+      * **Call:** `query="trade exports"`, `places=["France"]`, `maybe_bilateral=True`
+
+    * **Recipe 4: Known Bilateral Data (Multi-Place)**
+
+      * **Goal:** Find data *between* places (e.g., "trade from USA and Germany to France").
+
+      * **Call:** `query="trade exports"`, `places=["USA", "Germany", "France"]`, `maybe_bilateral=True`
+
+      * **Note:** The response's `places_with_data` will show which of "USA", "Germany", or "France" the observations are attached to. The other places are often part of the variable name itself.
+
     * **Recipe 5: No Place Filtering**
 
       * **Goal:** Find indicators for a query without checking any specific place (e.g., "what trade data do you have").
@@ -488,9 +494,13 @@ async def search_indicators(
 
       * **Result:** The tool returns matching indicators, but `places_with_data` will be empty.
 
-    **3. `per_search_limit` (int, optional, default=10)**
+    **3. `per_search_limit` (int, optional, default=10, max=100)**
 
-    * Maximum results per search (max 100).
+    * Maximum results per search.
+
+    * **CRITICAL RULE:** Only set per_search_limit when explicitly requested by the user.
+        - Use the default value (10) unless the user specifies a different limit
+        - Don't assume the user wants more or fewer results
 
     **4. `include_topics` (bool, optional, default=True)**
 
