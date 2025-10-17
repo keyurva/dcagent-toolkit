@@ -47,6 +47,7 @@ from datacommons_mcp.data_models.settings import (
     DCSettings,
 )
 from datacommons_mcp.topics import TopicStore, create_topic_store, read_topic_caches
+from datacommons_mcp.version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -1113,7 +1114,10 @@ def _create_base_dc_client(settings: BaseDCSettings) -> DCClient:
     topic_store = _create_base_topic_store(settings)
 
     # Create DataCommonsClient
-    dc = DataCommonsClient(api_key=settings.api_key)
+    dc = DataCommonsClient(
+        api_key=settings.api_key,
+        surface_header_value=f"mcp-{_trim_rc_from_version(__version__)}",
+    )
 
     # Create DCClient
     return DCClient(
@@ -1133,7 +1137,10 @@ def _create_custom_dc_client(settings: CustomDCSettings) -> DCClient:
     search_scope = settings.search_scope
 
     # Create DataCommonsClient
-    dc = DataCommonsClient(url=settings.api_base_url)
+    dc = DataCommonsClient(
+        url=settings.api_base_url,
+        surface_header_value=f"mcp-{_trim_rc_from_version(__version__)}",
+    )
 
     # Create topic store if root_topic_dcids provided
     topic_store: TopicStore | None = None
@@ -1161,3 +1168,12 @@ def _create_custom_dc_client(settings: CustomDCSettings) -> DCClient:
         # TODO (@jm-rivera): Remove place-like parameter new search endpoint is live.
         _place_like_constraints=settings.place_like_constraints,
     )
+
+
+def _trim_rc_from_version(version: str) -> str:
+    """Replaces 'rc' with '.' in a version string if present.
+    This is here temporarily because of validation in the DataCommonsClient
+    that surface headers must only contain numbers, which will be updated
+    shortly to include release candidates
+    """
+    return version.replace("rc", ".")
