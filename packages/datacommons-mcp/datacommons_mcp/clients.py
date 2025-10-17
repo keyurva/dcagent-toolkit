@@ -53,6 +53,15 @@ logger = logging.getLogger(__name__)
 
 DCID_TOPIC_PREFIX = "topic/"
 
+# Replaces 'rc' with '.' in a version string if present.
+# This is here temporarily because of validation in the DataCommonsClient
+# that surface headers must only contain numbers, which will be updated
+# shortly to include release candidates (TODO: lucysking)
+SURFACE_HEADER_VALUE = f"mcp-{__version__.replace('rc', '.')}"
+
+# 'x-surface' indicates to DC APIs that this call is coming from the MCP server
+SURFACE_HEADER: dict[str, str] = {"x-surface": SURFACE_HEADER_VALUE}
+
 
 class DCClient:
     def __init__(
@@ -333,7 +342,11 @@ class DCClient:
         }
 
         endpoint_url = f"{self.sv_search_base_url}/api/nl/search-indicators"
-        headers = {"Content-Type": "application/json"}
+
+        headers = {
+            "Content-Type": "application/json",
+            **SURFACE_HEADER,
+        }
         try:
             response = await asyncio.to_thread(
                 requests.get,
@@ -656,7 +669,7 @@ class DCClient:
         results_map = {}
         skip_topics_param = "&skip_topics=true" if skip_topics else ""
         endpoint_url = f"{self.sv_search_base_url}/api/nl/search-vector"
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", **SURFACE_HEADER}
 
         # Use precomputed indices based on configured search scope
         indices = self.search_indices
@@ -719,7 +732,7 @@ class DCClient:
         """
         results_map = {}
         endpoint_url = f"{self.sv_search_base_url}/api/nl/search-indicators"
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", **SURFACE_HEADER}
 
         # Use precomputed indices based on configured search scope
         indices = self.search_indices
@@ -1116,7 +1129,7 @@ def _create_base_dc_client(settings: BaseDCSettings) -> DCClient:
     # Create DataCommonsClient
     dc = DataCommonsClient(
         api_key=settings.api_key,
-        surface_header_value=f"mcp-{_trim_rc_from_version(__version__)}",
+        surface_header_value=SURFACE_HEADER_VALUE,
     )
 
     # Create DCClient
@@ -1139,7 +1152,7 @@ def _create_custom_dc_client(settings: CustomDCSettings) -> DCClient:
     # Create DataCommonsClient
     dc = DataCommonsClient(
         url=settings.api_base_url,
-        surface_header_value=f"mcp-{_trim_rc_from_version(__version__)}",
+        surface_header_value=SURFACE_HEADER_VALUE,
     )
 
     # Create topic store if root_topic_dcids provided
@@ -1168,12 +1181,3 @@ def _create_custom_dc_client(settings: CustomDCSettings) -> DCClient:
         # TODO (@jm-rivera): Remove place-like parameter new search endpoint is live.
         _place_like_constraints=settings.place_like_constraints,
     )
-
-
-def _trim_rc_from_version(version: str) -> str:
-    """Replaces 'rc' with '.' in a version string if present.
-    This is here temporarily because of validation in the DataCommonsClient
-    that surface headers must only contain numbers, which will be updated
-    shortly to include release candidates
-    """
-    return version.replace("rc", ".")
