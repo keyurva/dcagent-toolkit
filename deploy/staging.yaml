@@ -1,0 +1,80 @@
+# Copyright 2025 Google LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+steps:
+  # 1. Verify and Publish
+  - name: python:3.12-slim
+    entrypoint: bash
+    env: ['TAG_NAME=$TAG_NAME']
+    args:
+      - -c
+      - |
+        pip install uv
+        tag_version=$${TAG_NAME#v}
+        echo "$tag_version" > _version.txt
+        
+        # Inject Tag Version into pyproject.toml
+        sed -i 's/^version = ".*"/version = "'$tag_version'"/' packages/datacommons-mcp/pyproject.toml
+        cd packages/datacommons-mcp
+        uv build --out-dir dist
+        uv publish --publish-url https://test.pypi.org/legacy/ --token $$TEST_PYPI_TOKEN
+    secretEnv: ['TEST_PYPI_TOKEN']
+
+  # 2. Wait
+  - name: python:3.12-slim
+    entrypoint: bash
+    args:
+    - -c
+    - |
+      pip install certifi
+      python3 scripts/wait_for_pypi.py datacommons-mcp $(cat _version.txt) --repository https://test.pypi.org/simple
+
+  # 3. Build & Push Container
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        docker build \
+          --build-arg MCP_VERSION=$(cat _version.txt) \
+          --build-arg PIP_INDEX_URL=https://pypi.org/simple/ \
+          --build-arg PIP_EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
+          -t gcr.io/$PROJECT_ID/datacommons-mcp-server:staging-$TAG_NAME \
+          -t gcr.io/$PROJECT_ID/datacommons-mcp-server:staging .
+        docker push gcr.io/$PROJECT_ID/datacommons-mcp-server:staging-$TAG_NAME
+        docker push gcr.io/$PROJECT_ID/datacommons-mcp-server:staging
+
+  # 4. Deploy
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud run deploy mcp-server-staging \
+        --image=gcr.io/$PROJECT_ID/datacommons-mcp-server:staging \
+        --region=us-central1 \
+        --platform=managed \
+        --no-allow-unauthenticated \
+        --set-env-vars=MCP_VERSION=$(cat _version.txt) \
+        --set-secrets=DC_API_KEY=dc-api-key-for-mcp:latest \
+        --service-account=datacommons-mcp-server@datcom-mixer-staging.iam.gserviceaccount.com \
+        --project=datcom-mixer-staging
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/TEST_PYPI_TOKEN/versions/latest
+    env: 'TEST_PYPI_TOKEN'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
