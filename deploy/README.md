@@ -33,8 +33,8 @@ python3 scripts/create_staging_tag.py
 ```
 Or manually:
 ```bash
-git tag v1.1.3rc1
-git push origin v1.1.3rc1
+git tag vX.Y.Z.rcN
+git push upstream vX.Y.Z.rcN
 ```
 
 ## 3. Production Release
