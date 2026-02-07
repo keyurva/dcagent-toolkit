@@ -8,7 +8,7 @@ from dotenv import find_dotenv, load_dotenv
 from starlette.middleware import Middleware
 
 from .exceptions import APIKeyValidationError, InvalidAPIKeyError
-from .middleware import APIKeyMiddleware
+from .middleware import AcceptMiddleware, APIKeyMiddleware
 from .utils import validate_api_key
 from .version import __version__
 
@@ -90,7 +90,7 @@ def _run_http_server(host: str, port: int) -> None:
         port=port,
         transport="streamable-http",
         stateless_http=True,
-        middleware=[Middleware(APIKeyMiddleware)],
+        middleware=[Middleware(APIKeyMiddleware), Middleware(AcceptMiddleware)],
     )
 
 
