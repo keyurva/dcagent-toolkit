@@ -17,7 +17,7 @@ Core application module for the DC MCP server.
 
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from fastmcp import FastMCP
@@ -25,6 +25,7 @@ from fastmcp.tools.tool import Tool
 from pydantic import ValidationError
 
 from datacommons_mcp import settings
+from datacommons_mcp.agent_api_client import AgentAPIClient
 from datacommons_mcp.clients import create_dc_client
 from datacommons_mcp.utils import read_external_content, read_package_content
 from datacommons_mcp.version import __version__
@@ -54,20 +55,39 @@ class DCApp:
             logger.error("Settings error: %s", e)
             raise
 
-        # Create client
-        try:
-            self.client = create_dc_client(self.settings)
-        except Exception as e:
-            logger.error("Failed to create DC client: %s", e)
-            raise
+        # Create client only if agent APIs are NOT enabled (as fallback is not needed)
+        self.client = None
+        if not self.settings.use_agent_api:
+            try:
+                self.client = create_dc_client(self.settings)
+            except Exception as e:
+                logger.error("Failed to create DC client: %s", e)
+                raise
+
+        # Create agent API client only if enabled
+        self.agent_api_client = None
+        if self.settings.use_agent_api:
+            api_root = self.settings.api_root or "https://api.datacommons.org/v2"
+            api_key = getattr(self.settings, "api_key", None)
+            self.agent_api_client = AgentAPIClient(api_root=api_root, api_key=api_key)
 
         # Load Server Instructions
         server_instructions = self._load_instructions(SERVER_INSTRUCTIONS_FILE)
+
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def lifespan(_server: FastMCP) -> AsyncIterator[dict[str, Any]]:
+            yield {}
+            if self.agent_api_client:
+                logger.info("Closing Agent API client...")
+                await self.agent_api_client.close()
 
         self.mcp = FastMCP(
             MCP_SERVER_NAME,
             version=__version__,
             instructions=server_instructions,
+            lifespan=lifespan,
         )
 
     def _load_instructions(self, filename: str) -> str:
