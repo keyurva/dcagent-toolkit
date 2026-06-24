@@ -20,14 +20,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from datacommons_mcp.agent_api_client import AgentAPIClient
-from datacommons_mcp.agent_api_service import get_observations, search_indicators
+from datacommons_mcp.agent_api_service import (
+    get_observations,
+    get_variable_metadata,
+    search_indicators,
+)
 from datacommons_mcp.agent_api_tools import (
     get_observations as agent_api_tools_get_obs,
 )
 from datacommons_mcp.agent_api_tools import (
     search_indicators as agent_api_tools_search_ind,
 )
-from datacommons_mcp.app import app
 from datacommons_mcp.tools import (
     get_observations as tools_get_obs,
 )
@@ -63,6 +66,8 @@ async def test_agent_api_client_post():
 @pytest.mark.asyncio
 async def test_agent_api_service_get_observations():
     """Verify get_observations builds correct payload and invokes agent_api_client."""
+    from datacommons_mcp.app import app
+
     mock_client = AsyncMock()
     mock_client.post.return_value = {"placeObservations": []}
 
@@ -94,6 +99,8 @@ async def test_agent_api_service_get_observations():
 @pytest.mark.asyncio
 async def test_agent_api_service_search_indicators():
     """Verify search_indicators builds correct payload and invokes agent_api_client."""
+    from datacommons_mcp.app import app
+
     mock_client = AsyncMock()
     mock_client.post.return_value = {"variables": []}
 
@@ -201,3 +208,49 @@ async def test_agent_api_client_post_error():
         assert exc_info.value.body == '{"message": "Internal error"}'
 
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_agent_api_service_get_variable_metadata():
+    """Verify get_variable_metadata builds correct payload and invokes client."""
+    from datacommons_mcp.app import app
+
+    mock_client = AsyncMock()
+    mock_client.post.return_value = {"metadata": {}, "provenance": {}}
+
+    with patch.object(app, "agent_api_client", mock_client):
+        result = await get_variable_metadata(
+            variable_dcids=["Count_Person"],
+            entity_dcids=["geoId/06"],
+        )
+        assert result == {"metadata": {}, "provenance": {}}
+        mock_client.post.assert_called_once_with(
+            "agent/get_variable_metadata",
+            {
+                "variable_dcids": ["Count_Person"],
+                "entity_dcids": ["geoId/06"],
+            },
+        )
+
+
+def test_skills_provider_registration():
+    """Verify that SkillsDirectoryProvider is correctly registered when skills exist."""
+    from datacommons_mcp.server import _register_skills
+    from fastmcp.server.providers.skills import SkillsDirectoryProvider
+
+    mock_mcp = MagicMock()
+    mock_app = MagicMock()
+    mock_app.mode_dir = "agent_api"
+    mock_app.settings.instructions_dir = None  # Force package default fallback
+
+    _register_skills(mock_mcp, mock_app)
+
+    # Verify that add_provider was called
+    mock_mcp.add_provider.assert_called_once()
+    provider = mock_mcp.add_provider.call_args[0][0]
+    assert isinstance(provider, SkillsDirectoryProvider)
+
+    # Verify that the provider root points to agent_api/skills
+    assert len(provider._roots) == 1
+    assert "agent_api" in str(provider._roots[0])
+    assert "skills" in str(provider._roots[0])
