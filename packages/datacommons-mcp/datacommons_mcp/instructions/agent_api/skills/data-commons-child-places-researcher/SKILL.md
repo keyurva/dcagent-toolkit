@@ -13,7 +13,7 @@ Data Commons organizes data into two main structural hierarchies. Understanding 
 ### Data Availability & Efficiency Tips:
 
 * **Direct Containment Efficiency**: Querying the direct child places of a parent (e.g., all counties inside California) is highly optimized and returns faster than querying arbitrary cross-border place sets.
-* **Single-Place Routing**: If the user's query asks for statistics about a single specific place (e.g., *"population of France"* or *"GDP of California"*), you MUST use the base [data-commons-researcher](file:///usr/local/google/home/cjahn/dc-mcp-playground/agent_api/skills/data-commons-researcher/SKILL.md) skill instead.
+* **Single-Place Routing**: If the user's query asks for statistics about a single specific place (e.g., *"population of France"* or *"GDP of California"*), you MUST use the base [data-commons-researcher](../data-commons-researcher/SKILL.md) skill instead.
 
 ---
 
