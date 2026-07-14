@@ -13,7 +13,7 @@ Data Commons organizes data into two main structural hierarchies. Understanding 
 ### Data Availability & Efficiency Tips:
 
 * **Country-Level Priority**: Data coverage is always highest and most complete at the `Country` level. If a variable is missing at sub-national levels, fall back to checking country-level scope.
-* **Child Places Routing**: If the user's query asks for statistics across child places or within a geographic containment hierarchy (e.g., *"unemployment rate in all counties of California"* or *"GDP of countries in Africa"*), you MUST use the specialized [data-commons-child-places-researcher](file:///usr/local/google/home/cjahn/dc-mcp-playground/agent_api/skills/data-commons-child-places-researcher/SKILL.md) skill instead.
+* **Child Places Routing**: If the user's query asks for statistics across child places or within a geographic containment hierarchy (e.g., *"unemployment rate in all counties of California"* or *"GDP of countries in Africa"*), you MUST use the specialized [data-commons-child-places-researcher](../data-commons-child-places-researcher/SKILL.md) skill instead.
 
 ---
 
