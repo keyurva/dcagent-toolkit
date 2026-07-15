@@ -13,7 +13,7 @@ Data Commons organizes data into two main structural hierarchies. Understanding 
 ### Data Availability & Efficiency Tips:
 
 * **Direct Containment Efficiency**: Querying the direct child places of a parent (e.g., all counties inside California) is highly optimized and returns faster than querying arbitrary cross-border place sets.
-* **Single-Place Routing**: If the user's query asks for statistics about a single specific place (e.g., *"population of France"* or *"GDP of California"*), you MUST use the base [data-commons-researcher](../data-commons-researcher/SKILL.md) skill instead.
+* **Single-Place Routing**: If the user's query asks for statistics about a single specific place (e.g., *"population of France"* or *"GDP of California"*), you MUST read the base skill resource at 'skill://data-commons-researcher/SKILL.md' instead.
 
 ---
 
@@ -201,7 +201,7 @@ Before calling `get_child_observations`, inspect the `dcidPlaceTypeMappings` ret
 1. **Common Type**: Find the place type common to ALL sampled child places.
 2. **Specific Type Priority**: If multiple types are common to all child places, choose the most specific type (e.g., prefer `"County"` over `"AdministrativeArea2"`).
 3. **Majority Fallback**: If no single type is common to all, use the type that maps to a clear majority (50%+ threshold) of the sample.
-4. **Resolution Failure**: If there is no common type and no majority type, child-place mode is not supported. Fall back to making individual `get_observations` calls in single-place mode for each child place using the base `data-commons-researcher` skill.
+4. **Resolution Failure**: If there is no common type and no majority type, child-place mode is not supported. Fall back to making individual `get_observations` calls in single-place mode for each child place using the base skill resource at 'skill://data-commons-researcher/SKILL.md'.
 
 ---
 

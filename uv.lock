@@ -466,7 +466,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "datacommons-mcp", editable = "packages/datacommons-mcp" },
-    { name = "fastmcp", specifier = ">=2.13.1" },
+    { name = "fastmcp", specifier = "==3.4.2" },
     { name = "google-adk", marker = "extra == 'test'" },
     { name = "google-adk", extras = ["eval"], marker = "extra == 'test'" },
     { name = "pre-commit", specifier = ">=4.3.0" },
@@ -523,7 +523,7 @@ test = [
 requires-dist = [
     { name = "datacommons-client", specifier = ">=2.1.6" },
     { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "fastmcp", specifier = ">=3.0.0" },
+    { name = "fastmcp", specifier = "==3.4.2" },
     { name = "google-cloud-storage" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings" },
