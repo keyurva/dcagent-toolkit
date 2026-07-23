@@ -19,6 +19,7 @@ from typing import Any
 
 from datacommons_mcp.agent_api_client import AgentAPIClient
 from datacommons_mcp.app import app
+from datacommons_mcp.data_models.observations import ObservationDateType
 
 
 def _get_agent_api_client() -> AgentAPIClient:
@@ -39,12 +40,68 @@ async def get_observations(
     date_range_start: str | None = None,
     date_range_end: str | None = None,
 ) -> dict[str, Any]:
-    """Fetches observations via the Agent API agent/get_observations endpoint."""
+    """Fetches single-place or child-place observations via agent/get_observations."""
     client = _get_agent_api_client()
+    if child_place_type:
+        entities: dict[str, Any] = {
+            "observationAbout": {
+                "parent_dcid": place_dcid,
+                "child_type": child_place_type,
+            }
+        }
+    else:
+        entities = {"observationAbout": [place_dcid]}
+
     payload = {
         "variable_dcid": variable_dcid,
-        "place_dcid": place_dcid,
-        "child_place_type": child_place_type,
+        "entities": entities,
+        "source_override": source_override,
+        "date": date,
+        "date_range_start": date_range_start,
+        "date_range_end": date_range_end,
+    }
+    return await client.post("agent/get_observations", payload)
+
+
+async def get_multi_entity_observations(
+    variable_dcid: str,
+    entities: dict[str, list[str]],
+    parent_entity_property: str | None = None,
+    parent_entity_dcid: str | None = None,
+    child_entity_type: str | None = None,
+    source_override: str | None = None,
+    date: str | None = ObservationDateType.LATEST.value,
+    date_range_start: str | None = None,
+    date_range_end: str | None = None,
+) -> dict[str, Any]:
+    """Fetches multi-entity observations via the Agent API agent/get_observations endpoint."""
+    client = _get_agent_api_client()
+    entities_payload: dict[str, Any] = dict(entities)
+
+    child_expansion_params = [
+        parent_entity_property,
+        parent_entity_dcid,
+        child_entity_type,
+    ]
+    if any(child_expansion_params):
+        if not all(child_expansion_params):
+            raise ValueError(
+                "To use child entity expansion, all of 'parent_entity_property', "
+                "'parent_entity_dcid', and 'child_entity_type' must be provided."
+            )
+        if parent_entity_property in entities_payload:
+            raise ValueError(
+                f"Property '{parent_entity_property}' cannot be specified in both 'entities' "
+                "and child expansion parameters."
+            )
+        entities_payload[parent_entity_property] = {  # type: ignore[index]
+            "parent_dcid": parent_entity_dcid,
+            "child_type": child_entity_type,
+        }
+
+    payload = {
+        "variable_dcid": variable_dcid,
+        "entities": entities_payload,
         "source_override": source_override,
         "date": date,
         "date_range_start": date_range_start,
