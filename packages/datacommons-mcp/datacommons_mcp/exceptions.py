@@ -54,3 +54,14 @@ class AgentAPIError(Exception):
         super().__init__(message)
         self.status_code = status_code
         self.body = body
+
+    def __str__(self) -> str:
+        base = super().__str__()
+        if self.body:
+            truncated_body = (
+                self.body
+                if len(self.body) <= 500
+                else f"{self.body[:500]}... [truncated]"
+            )
+            return f"{base} - Body: {truncated_body}"
+        return base
