@@ -72,6 +72,8 @@ steps:
         --platform=managed \
         --no-allow-unauthenticated \
         --set-env-vars=MCP_VERSION=$(cat _version.txt) \
+        --set-env-vars=DC_USE_AGENT_API=true \
+        --set-env-vars=DC_AGENT_API_ROOT=https://autopush.api.datacommons.org/v2 \
         --set-env-vars=DC_API_ROOT=https://autopush.api.datacommons.org/v2 \
         --set-env-vars=DC_SEARCH_ROOT=https://datacommons.org \
         --set-env-vars=DC_API_KEY_VALIDATION_ROOT=https://autopush.api.datacommons.org \
