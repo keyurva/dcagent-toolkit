@@ -202,25 +202,49 @@ When `date="range"` is used in `get_observations`, the date ranges are evaluated
 
 ## 8. Processing `get_observations` Responses
 
+All observation responses return a uniform dual-table structure:
+1. **`entityMetadata`**: Maps entity DCIDs to human-readable names and types using tabular `columns` and `rows`.
+2. **`data` Table**: Matrix of observations containing columns `["observationAbout", "date", "value"]` and tabular `rows`.
+
 ### A. Response Structure Reference
 ```json
 {
-  "variable": { "dcid": "Count_Person", "name": "Total population" },
-  "placeObservations": [
-    {
-      "place": { "dcid": "country/FRA", "name": "France", "typeOf": ["Country"] },
-      "timeSeries": [{ "date": "2025", "value": 68605616 }]
-    }
-  ],
-  "sourceMetadata": { "sourceId": "2911625765", "provenanceUrl": "https://www.insee.fr" },
-  "alternativeSources": []
+  "variable": {
+    "dcid": "Count_Person",
+    "name": "Total population",
+    "typeOf": ["StatisticalVariable"]
+  },
+  "sourceMetadata": {
+    "sourceId": "2911625765",
+    "observationPeriod": "P1Y",
+    "provenanceUrl": "https://www.insee.fr",
+    "unit": "Person"
+  },
+  "alternativeSources": [],
+  "entityMetadata": {
+    "columns": ["dcid", "name", "typeOf"],
+    "rows": [
+      ["country/FRA", "France", ["Country"]]
+    ]
+  },
+  "data": {
+    "columns": ["observationAbout", "date", "value"],
+    "rows": [
+      ["country/FRA", "2025", 68605616]
+    ]
+  }
 }
 ```
 
 ### B. Field Mapping Rules
 * **`variable`**: Details about the statistical variable requested.
-* **`placeObservations`**: A list of observations, one entry per place. Each entry contains:
-  * `place`: Details about the observed place (DCID, name, type).
-  * `timeSeries`: A list of `(date, value)` objects.
+* **`entityMetadata`**: Matrix of entity metadata:
+  * `columns`: Array of column names (`dcid`, `name`, `typeOf`).
+  * `rows`: Tabular arrays of `[entity_dcid, entity_name, entity_types]`.
+* **`data`**: Matrix of observations:
+  * `columns`: Array of column names (`observationAbout`, `date`, `value`).
+  * `rows`: Tabular arrays of `[entity_dcid, date, value]`.
 * **`sourceMetadata`**: Primary authoritative data source information.
 * **`alternativeSources`**: Secondary available sources for validation or cross-referencing.
+
+

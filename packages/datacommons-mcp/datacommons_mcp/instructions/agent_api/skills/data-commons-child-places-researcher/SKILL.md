@@ -230,29 +230,51 @@ When `date="range"` is used, the date ranges are evaluated as follows:
 
 ## 9. Processing `get_child_observations` Responses
 
+All child observation responses return a uniform dual-table structure:
+1. **`entityMetadata`**: Maps child entity DCIDs to human-readable names and types using tabular `columns` and `rows`.
+2. **`data` Table**: Matrix of observations containing columns `["observationAbout", "date", "value"]` and tabular `rows`.
+
 ### A. Response Structure Reference
 ```json
 {
-  "variable": { "dcid": "UnemploymentRate_Person", "name": "Unemployment Rate" },
-  "resolvedParentPlace": { "dcid": "geoId/06", "name": "California", "typeOf": ["State"] },
-  "childPlaceType": "County",
-  "placeObservations": [
-    {
-      "place": { "dcid": "geoId/06037", "name": "Los Angeles County", "typeOf": ["County"] },
-      "timeSeries": [{ "date": "2024", "value": 5.4 }]
-    }
-  ],
-  "sourceMetadata": { "sourceId": "2176550201", "provenanceUrl": "https://www.bls.gov" },
-  "alternativeSources": []
+  "variable": {
+    "dcid": "UnemploymentRate_Person",
+    "name": "Unemployment Rate",
+    "typeOf": ["StatisticalVariable"]
+  },
+  "sourceMetadata": {
+    "sourceId": "2176550201",
+    "observationPeriod": "P1Y",
+    "provenanceUrl": "https://www.bls.gov",
+    "unit": "Percent"
+  },
+  "alternativeSources": [],
+  "entityMetadata": {
+    "columns": ["dcid", "name", "typeOf"],
+    "rows": [
+      ["geoId/06037", "Los Angeles County", ["AdministrativeArea2", "County", "Place"]],
+      ["geoId/06075", "San Francisco County", ["AdministrativeArea2", "County", "Place"]]
+    ]
+  },
+  "data": {
+    "columns": ["observationAbout", "date", "value"],
+    "rows": [
+      ["geoId/06037", "2024", 5.4],
+      ["geoId/06075", "2024", 4.1]
+    ]
+  }
 }
 ```
 
 ### B. Field Mapping Rules
 * **`variable`**: Details about the statistical variable requested.
-* **`resolvedParentPlace`**: Structural verification of how the parent place parameter was resolved.
-* **`childPlaceType`**: Confirms the administrative type applied to all child observations.
-* **`placeObservations`**: A list of observations, one entry per child place. Each entry contains:
-  * `place`: Details about the observed child place (DCID, name, type).
-  * `timeSeries`: A list of `(date, value)` objects.
+* **`entityMetadata`**: Matrix of child entity metadata:
+  * `columns`: Array of column names (`dcid`, `name`, `typeOf`).
+  * `rows`: Tabular arrays of `[child_dcid, entity_name, entity_types]`.
+* **`data`**: Matrix of child observations:
+  * `columns`: Array of column names (`observationAbout`, `date`, `value`).
+  * `rows`: Tabular arrays of `[child_dcid, date, value]`.
 * **`sourceMetadata`**: Primary authoritative data source information.
 * **`alternativeSources`**: Secondary available sources.
+
+
