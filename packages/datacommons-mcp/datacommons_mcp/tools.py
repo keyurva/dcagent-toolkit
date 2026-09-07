@@ -28,6 +28,9 @@ from datacommons_mcp.services import (
     get_variable_metadata as services_get_variable_metadata,
 )
 from datacommons_mcp.services import (
+    get_stat_vars_by_constraints as services_get_stat_vars_by_constraints,
+)
+from datacommons_mcp.services import (
     inspect_indicator_nodes as services_inspect_indicator_nodes,
 )
 from datacommons_mcp.services import (
@@ -101,6 +104,20 @@ async def inspect_indicator_nodes(
         dcids=dcids,
         place_dcids=place_dcids,
     )
+
+
+async def get_stat_vars_by_constraints(
+    seed_dcid: str,
+    constraints: dict[str, list[str]],
+    place_dcids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Fetches child statistical variables matching exact or partial breakdown constraint property-value combinations."""
+    return await services_get_stat_vars_by_constraints(
+        seed_dcid=seed_dcid,
+        constraints=constraints,
+        place_dcids=place_dcids,
+    )
+
 
 
 

@@ -156,3 +156,23 @@ async def inspect_indicator_nodes(
         payload["place_dcids"] = place_dcids
     return await client.post("agent/inspect_indicator_nodes", payload)
 
+
+async def get_stat_vars_by_constraints(
+    seed_dcid: str,
+    constraints: dict[str, list[str]],
+    place_dcids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Fetches child StatVars matching requested constraint properties and values."""
+    client = _get_client()
+    formatted_constraints = {
+        prop: {"values": vals} for prop, vals in constraints.items()
+    }
+    payload: dict[str, Any] = {
+        "seedDcid": seed_dcid,
+        "constraints": formatted_constraints,
+    }
+    if place_dcids:
+        payload["placeDcids"] = place_dcids
+    return await client.post("agent/get_stat_vars_by_constraints", payload)
+
+
