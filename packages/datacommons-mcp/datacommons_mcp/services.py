@@ -145,14 +145,14 @@ async def get_variable_metadata(
 
 async def inspect_indicator_nodes(
     dcids: list[str],
-    place_dcid: str | None = None,
+    place_dcids: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Inspects the indicator ontology neighborhood (breakdowns, slices, or topic members) for DCIDs."""
+    """Inspects indicator metadata, provenances, and ontology breakdown neighborhoods for DCIDs."""
     client = _get_client()
     payload: dict[str, Any] = {
         "dcids": dcids,
     }
-    if place_dcid:
-        payload["place_dcid"] = place_dcid
+    if place_dcids:
+        payload["place_dcids"] = place_dcids
     return await client.post("agent/inspect_indicator_nodes", payload)
 

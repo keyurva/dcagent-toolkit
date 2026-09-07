@@ -94,12 +94,12 @@ async def get_variable_metadata(
 
 async def inspect_indicator_nodes(
     dcids: list[str],
-    place_dcid: str | None = None,
+    place_dcids: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Inspects indicator ontology neighborhoods to discover populated breakdown dimensions and slice DCIDs."""
+    """Inspects indicator metadata, provenances, date coverage, and ontology breakdown dimensions."""
     return await services_inspect_indicator_nodes(
         dcids=dcids,
-        place_dcid=place_dcid,
+        place_dcids=place_dcids,
     )
 
 
