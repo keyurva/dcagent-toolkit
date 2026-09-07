@@ -55,6 +55,10 @@ app.register_tool(
     tools.GET_VARIABLE_METADATA_INSTRUCTION_FILE,
 )
 app.register_tool(
+    tools.inspect_indicator_nodes,
+    tools.INSPECT_INDICATOR_NODES_INSTRUCTION_FILE,
+)
+app.register_tool(
     tools.get_observations,
     tools.GET_OBSERVATIONS_INSTRUCTION_FILE,
 )

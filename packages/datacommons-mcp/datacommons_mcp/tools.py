@@ -28,6 +28,9 @@ from datacommons_mcp.services import (
     get_variable_metadata as services_get_variable_metadata,
 )
 from datacommons_mcp.services import (
+    inspect_indicator_nodes as services_inspect_indicator_nodes,
+)
+from datacommons_mcp.services import (
     search_indicators as services_search_indicators,
 )
 
@@ -35,6 +38,7 @@ from datacommons_mcp.services import (
 SEARCH_INDICATORS_INSTRUCTION_FILE = "tools/search_indicators.md"
 SEARCH_CHILD_INDICATORS_INSTRUCTION_FILE = "tools/search_child_indicators.md"
 GET_VARIABLE_METADATA_INSTRUCTION_FILE = "tools/get_variable_metadata.md"
+INSPECT_INDICATOR_NODES_INSTRUCTION_FILE = "tools/inspect_indicator_nodes.md"
 GET_OBSERVATIONS_INSTRUCTION_FILE = "tools/get_observations.md"
 GET_CHILD_OBSERVATIONS_INSTRUCTION_FILE = "tools/get_child_observations.md"
 GET_MULTI_ENTITY_OBSERVATIONS_INSTRUCTION_FILE = (
@@ -86,6 +90,18 @@ async def get_variable_metadata(
         variable_dcids=variable_dcids,
         entity_dcids=entity_dcids,
     )
+
+
+async def inspect_indicator_nodes(
+    dcids: list[str],
+    place_dcid: str | None = None,
+) -> dict[str, Any]:
+    """Inspects indicator ontology neighborhoods to discover populated breakdown dimensions and slice DCIDs."""
+    return await services_inspect_indicator_nodes(
+        dcids=dcids,
+        place_dcid=place_dcid,
+    )
+
 
 
 async def get_observations(
