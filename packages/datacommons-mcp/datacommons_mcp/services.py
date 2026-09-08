@@ -116,53 +116,57 @@ async def search_indicators(
     *,
     include_topics: bool = True,
 ) -> dict[str, Any]:
-    """Searches for indicators via the Agent API agent/search_indicators endpoint."""
-    client = _get_client()
-    payload = {
-        "query": query,
-        "places": places or [],
-        "parent_place": parent_place,
-        "per_search_limit": per_search_limit,
-        "include_topics": include_topics,
-        "target": client.search_scope,
-    }
+  """Searches for indicators via the Agent API agent/search_indicators endpoint."""
+  client = _get_client()
+  payload = {
+      "query": query,
+      "places": places or [],
+      "parent_place": parent_place,
+      "per_search_limit": per_search_limit,
+      "include_topics": include_topics,
+      "expand_topics": False,
+      "target": client.search_scope,
+  }
 
-    return await client.post("agent/search_indicators", payload)
+  return await client.post("agent/search_indicators", payload)
 
 
 async def get_variable_metadata(
     variable_dcids: list[str],
     entity_dcids: list[str],
 ) -> dict[str, Any]:
-    """Retrieves rich structural metadata (definitions, coverage, and provenances) for variables."""
-    client = _get_client()
-    payload = {
-        "variable_dcids": variable_dcids,
-        "entity_dcids": entity_dcids,
-    }
-    return await client.post("agent/get_variable_metadata", payload)
+  """Retrieves rich structural metadata (definitions, coverage, and provenances) for variables."""
+  client = _get_client()
+  payload = {
+      "variable_dcids": variable_dcids,
+      "entity_dcids": entity_dcids,
+  }
+  return await client.post("agent/get_variable_metadata", payload)
 
 
 async def inspect_indicator_nodes(
     dcids: list[str],
     place_dcids: list[str] | None = None,
+    properties: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Inspects indicator metadata, provenances, and ontology breakdown neighborhoods for DCIDs."""
-    client = _get_client()
-    payload: dict[str, Any] = {
-        "dcids": dcids,
-    }
-    if place_dcids:
-        payload["place_dcids"] = place_dcids
-    return await client.post("agent/inspect_indicator_nodes", payload)
+  """Inspects indicator metadata, provenances, and ontology breakdown neighborhoods for DCIDs."""
+  client = _get_client()
+  payload: dict[str, Any] = {
+      "dcids": dcids,
+  }
+  if place_dcids:
+    payload["place_dcids"] = place_dcids
+  if properties:
+    payload["properties"] = properties
+  return await client.post("agent/inspect_indicator_nodes", payload)
 
 
-async def get_stat_vars_by_constraints(
+async def get_variables_by_constraints(
     seed_dcid: str,
     constraints: dict[str, list[str]],
     place_dcids: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Fetches child StatVars matching requested constraint properties and values."""
+    """Fetches statistical variables matching requested constraint properties and values."""
     client = _get_client()
     formatted_constraints = {
         prop: {"values": vals} for prop, vals in constraints.items()

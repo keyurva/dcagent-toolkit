@@ -59,6 +59,10 @@ app.register_tool(
     tools.INSPECT_INDICATOR_NODES_INSTRUCTION_FILE,
 )
 app.register_tool(
+    tools.get_variables_by_constraints,
+    tools.GET_VARIABLES_BY_CONSTRAINTS_INSTRUCTION_FILE,
+)
+app.register_tool(
     tools.get_observations,
     tools.GET_OBSERVATIONS_INSTRUCTION_FILE,
 )
